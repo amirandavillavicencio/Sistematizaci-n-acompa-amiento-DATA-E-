@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import re
+import json
 from collections import Counter
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -10,6 +12,7 @@ import pandas as pd
 from openpyxl import load_workbook
 
 OUTPUT_FILE = "DATAE_APOYOS_2025_INFORME.xlsx"
+TEMPLATE_FILE = "dashboard_apoyos_2025.html"
 SHEET_ORDER = [
     "RESUMEN_GENERAL",
     "SAN_JOAQUIN",
@@ -228,6 +231,237 @@ def apply_sheet_format(excel_path: Path) -> None:
     wb.save(excel_path)
 
 
+def parse_support_count(value: Any) -> int:
+    txt = norm_text(value).upper()
+    if not txt:
+        return 0
+    if txt == "X":
+        return 1
+    if re.fullmatch(r"\d+", txt):
+        return int(txt)
+    return 0
+
+
+def locate_excel_input(repo_root: Path) -> Path:
+    candidates = [
+        repo_root / "data" / OUTPUT_FILE,
+        repo_root / OUTPUT_FILE,
+        repo_root / "output" / OUTPUT_FILE,
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            print(f"Excel fuente para dashboard: {candidate}")
+            return candidate
+    raise FileNotFoundError(
+        "No se encontró DATAE_APOYOS_2025_INFORME.xlsx en data/, raíz del repo ni output/."
+    )
+
+
+def locate_template(repo_root: Path) -> Path:
+    candidates = [repo_root / TEMPLATE_FILE, repo_root / "data" / TEMPLATE_FILE]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    raise FileNotFoundError(
+        "No se encontró dashboard_apoyos_2025.html en la raíz del repo ni en data/."
+    )
+
+
+def read_sheet_best_effort(xls: pd.ExcelFile, sheet_name: str, critical: bool = False) -> pd.DataFrame:
+    if sheet_name not in xls.sheet_names:
+        msg = f"Hoja faltante: {sheet_name}"
+        if critical:
+            raise ValueError(f"{msg} (crítica)")
+        print(f"[WARN] {msg}")
+        return pd.DataFrame()
+    return pd.read_excel(xls, sheet_name=sheet_name).fillna("")
+
+
+def summarize_students_for_payload(df: pd.DataFrame, campus_label: str) -> list[dict[str, Any]]:
+    if df.empty:
+        return []
+
+    rut_col = find_col(df, "RUT", "RUN")
+    name_col = find_col(df, "Nombre", "NOMBRE")
+    ciac_col = find_col(df, "Apoyo_Academico_CIAC", "CIAC")
+    talleres_col = find_col(df, "Talleres")
+    mentorias_col = find_col(df, "Mentorias", "Mentorías")
+    atenciones_col = find_col(df, "Atenciones_Individuales", "Atenciones")
+
+    rows: list[dict[str, Any]] = []
+    for _, row in df.iterrows():
+        rut_original = row[rut_col] if rut_col else ""
+        rut_norm = normalize_rut(rut_original)
+        rut_valido, _ = validate_rut(rut_norm)
+
+        ciac = parse_support_count(row[ciac_col]) if ciac_col else 0
+        talleres = parse_support_count(row[talleres_col]) if talleres_col else 0
+        mentorias = parse_support_count(row[mentorias_col]) if mentorias_col else 0
+        atenciones = parse_support_count(row[atenciones_col]) if atenciones_col else 0
+
+        rows.append({
+            "RUT_NORM": rut_norm,
+            "RUT_VALIDO": bool(rut_valido),
+            "RUT_ORIGINAL_SI_INVALIDO": norm_text(rut_original) if not rut_valido else "",
+            "NOMBRE_NORMALIZADO": norm_text(row[name_col]).upper() if name_col else "",
+            "CAMPUS": campus_label,
+            "Apoyo_Academico_CIAC": ciac,
+            "Talleres": talleres,
+            "Mentorias": mentorias,
+            "Atenciones_Individuales": atenciones,
+            "TOTAL_PARTICIPACIONES": ciac + talleres + mentorias + atenciones,
+        })
+    return rows
+
+
+def build_resumen_structure(sj: dict[str, int], vit: dict[str, int], total: dict[str, int]) -> dict[str, dict[str, int]]:
+    return {
+        "Estudiantes_unicos": {"San_Joaquin": sj["Estudiantes_unicos"], "Vitacura": vit["Estudiantes_unicos"], "Total": total["Estudiantes_unicos"]},
+        "Apoyo_CIAC": {"San_Joaquin": sj["Apoyo_CIAC"], "Vitacura": vit["Apoyo_CIAC"], "Total": total["Apoyo_CIAC"]},
+        "Talleres": {"San_Joaquin": sj["Talleres"], "Vitacura": vit["Talleres"], "Total": total["Talleres"]},
+        "Mentorias": {"San_Joaquin": sj["Mentorias"], "Vitacura": vit["Mentorias"], "Total": total["Mentorias"]},
+        "Atenciones_Individuales": {
+            "San_Joaquin": sj["Atenciones_Individuales"],
+            "Vitacura": vit["Atenciones_Individuales"],
+            "Total": total["Atenciones_Individuales"],
+        },
+    }
+
+
+def campus_metrics(students: list[dict[str, Any]]) -> dict[str, int]:
+    unique_ids = {
+        s["RUT_NORM"] if s["RUT_VALIDO"] else f"INVALID:{s['RUT_ORIGINAL_SI_INVALIDO']}"
+        for s in students
+    }
+    return {
+        "Estudiantes_unicos": len(unique_ids),
+        "Apoyo_CIAC": int(sum(s["Apoyo_Academico_CIAC"] for s in students)),
+        "Talleres": int(sum(s["Talleres"] for s in students)),
+        "Mentorias": int(sum(s["Mentorias"] for s in students)),
+        "Atenciones_Individuales": int(sum(s["Atenciones_Individuales"] for s in students)),
+    }
+
+
+def extract_resumen_general(resumen_df: pd.DataFrame) -> dict[str, dict[str, int]]:
+    if resumen_df.empty:
+        return build_resumen_structure(
+            {"Estudiantes_unicos": 0, "Apoyo_CIAC": 0, "Talleres": 0, "Mentorias": 0, "Atenciones_Individuales": 0},
+            {"Estudiantes_unicos": 0, "Apoyo_CIAC": 0, "Talleres": 0, "Mentorias": 0, "Atenciones_Individuales": 0},
+            {"Estudiantes_unicos": 0, "Apoyo_CIAC": 0, "Talleres": 0, "Mentorias": 0, "Atenciones_Individuales": 0},
+        )
+
+    campus_col = find_col(resumen_df, "Campus")
+    row_map = {norm_text(row[campus_col]).upper(): row for _, row in resumen_df.iterrows()} if campus_col else {}
+
+    def metric(row: Any, *aliases: str) -> int:
+        if row is None:
+            return 0
+        for alias in aliases:
+            col = find_col(resumen_df, alias)
+            if col:
+                return parse_int(row[col], 0)
+        return 0
+
+    sj_row = row_map.get("SAN_JOAQUIN")
+    vit_row = row_map.get("VITACURA")
+    total_row = row_map.get("TOTAL")
+
+    sj = {
+        "Estudiantes_unicos": metric(sj_row, "Estudiantes_unicos"),
+        "Apoyo_CIAC": metric(sj_row, "CIAC_total", "Apoyo_CIAC"),
+        "Talleres": metric(sj_row, "Talleres_total", "Talleres"),
+        "Mentorias": metric(sj_row, "Mentorias_total", "Mentorias"),
+        "Atenciones_Individuales": metric(sj_row, "Atenciones_total", "Atenciones_Individuales"),
+    }
+    vit = {
+        "Estudiantes_unicos": metric(vit_row, "Estudiantes_unicos"),
+        "Apoyo_CIAC": metric(vit_row, "CIAC_total", "Apoyo_CIAC"),
+        "Talleres": metric(vit_row, "Talleres_total", "Talleres"),
+        "Mentorias": metric(vit_row, "Mentorias_total", "Mentorias"),
+        "Atenciones_Individuales": metric(vit_row, "Atenciones_total", "Atenciones_Individuales"),
+    }
+    total = {
+        "Estudiantes_unicos": metric(total_row, "Estudiantes_unicos") or (sj["Estudiantes_unicos"] + vit["Estudiantes_unicos"]),
+        "Apoyo_CIAC": metric(total_row, "CIAC_total", "Apoyo_CIAC") or (sj["Apoyo_CIAC"] + vit["Apoyo_CIAC"]),
+        "Talleres": metric(total_row, "Talleres_total", "Talleres") or (sj["Talleres"] + vit["Talleres"]),
+        "Mentorias": metric(total_row, "Mentorias_total", "Mentorias") or (sj["Mentorias"] + vit["Mentorias"]),
+        "Atenciones_Individuales": metric(total_row, "Atenciones_total", "Atenciones_Individuales") or (sj["Atenciones_Individuales"] + vit["Atenciones_Individuales"]),
+    }
+    return build_resumen_structure(sj, vit, total)
+
+
+def load_excel_build_payload(excel_path: Path) -> dict[str, Any]:
+    xls = pd.ExcelFile(excel_path)
+    total_rows_all_sheets = 0
+    for sheet in xls.sheet_names:
+        total_rows_all_sheets += len(pd.read_excel(xls, sheet_name=sheet))
+
+    resumen_df = read_sheet_best_effort(xls, "RESUMEN_GENERAL", critical=False)
+    sj_df = read_sheet_best_effort(xls, "SAN_JOAQUIN", critical=True)
+    vit_df = read_sheet_best_effort(xls, "VITACURA", critical=True)
+    calidad_df = read_sheet_best_effort(xls, "REPORTE_CALIDAD", critical=False)
+
+    students = summarize_students_for_payload(sj_df, "San Joaquín") + summarize_students_for_payload(vit_df, "Vitacura")
+
+    sj_calc = campus_metrics([s for s in students if s["CAMPUS"] == "San Joaquín"])
+    vit_calc = campus_metrics([s for s in students if s["CAMPUS"] == "Vitacura"])
+    total_calc = {
+        k: sj_calc[k] + vit_calc[k] for k in ["Apoyo_CIAC", "Talleres", "Mentorias", "Atenciones_Individuales"]
+    }
+    total_calc["Estudiantes_unicos"] = sj_calc["Estudiantes_unicos"] + vit_calc["Estudiantes_unicos"]
+
+    resumen_general = extract_resumen_general(resumen_df)
+    totales_calculados = build_resumen_structure(sj_calc, vit_calc, total_calc)
+
+    print("Comparación RESUMEN_GENERAL vs totales calculados:")
+    for metric in ["Estudiantes_unicos", "Apoyo_CIAC", "Talleres", "Mentorias", "Atenciones_Individuales"]:
+        for campus in ["San_Joaquin", "Vitacura", "Total"]:
+            expected = resumen_general[metric][campus]
+            calculated = totales_calculados[metric][campus]
+            if expected != calculated:
+                print(f"  [DIFF] {metric} - {campus}: resumen={expected}, calculado={calculated}")
+
+    estudiantes_con_apoyo = sum(1 for s in students if s["TOTAL_PARTICIPACIONES"] > 0)
+    estudiantes_unicos_total = total_calc["Estudiantes_unicos"]
+    pct_apoyo = round((estudiantes_con_apoyo / estudiantes_unicos_total) * 100, 2) if estudiantes_unicos_total else 0.0
+
+    payload: dict[str, Any] = {
+        "meta": {
+            "generated_at_iso": datetime.utcnow().isoformat(timespec="seconds"),
+            "total_rows_all_sheets": int(total_rows_all_sheets),
+        },
+        "resumen_general": resumen_general,
+        "totales_calculados": totales_calculados,
+        "kpis": {
+            "estudiantes_unicos_total": estudiantes_unicos_total,
+            "apoyo_ciac_total": total_calc["Apoyo_CIAC"],
+            "talleres_total": total_calc["Talleres"],
+            "mentorias_total": total_calc["Mentorias"],
+            "atenciones_total": total_calc["Atenciones_Individuales"],
+            "pct_estudiantes_con_apoyo": pct_apoyo,
+        },
+        "campus_totals": {
+            "San Joaquín": sj_calc,
+            "Vitacura": vit_calc,
+        },
+        "students": students,
+    }
+    if not calidad_df.empty:
+        payload["reporte_calidad"] = calidad_df.to_dict(orient="records")
+    return payload
+
+
+def render_dashboard(template_path: Path, payload: dict[str, Any], out_path: Path) -> None:
+    html = template_path.read_text(encoding="utf-8")
+    replacement = f"const DATOS = {json.dumps(payload, ensure_ascii=False)};"
+    pattern = re.compile(r"const\s+DATOS\s*=\s*\{.*?\};", re.DOTALL)
+    if not pattern.search(html):
+        raise ValueError("No se encontró el bloque 'const DATOS = {...};' en la plantilla.")
+    rendered = pattern.sub(replacement, html, count=1)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(rendered, encoding="utf-8")
+
+
 def run_pipeline(repo_root: Path) -> None:
     data_dir = repo_root / "data"
     output_dir = repo_root / "output"
@@ -436,7 +670,21 @@ def run_pipeline(repo_root: Path) -> None:
 
 
 def main() -> None:
-    run_pipeline(Path(__file__).resolve().parent)
+    repo_root = Path(__file__).resolve().parent
+    run_pipeline(repo_root)
+
+    excel_path = locate_excel_input(repo_root)
+    try:
+        template_path = locate_template(repo_root)
+    except FileNotFoundError as exc:
+        print(f"[WARN] {exc}")
+        return
+
+    payload = load_excel_build_payload(excel_path)
+    dashboard_output = repo_root / "output" / TEMPLATE_FILE
+    render_dashboard(template_path, payload, dashboard_output)
+    (repo_root / "dashboard.html").write_text(dashboard_output.read_text(encoding="utf-8"), encoding="utf-8")
+    print(f"Dashboard generado: {dashboard_output}")
 
 
 if __name__ == "__main__":
