@@ -27,6 +27,15 @@ ACT_ATENCION = "ATENCION"
 # =========================
 
 RUT_RE = re.compile(r"^\d{7,8}-[0-9K]$")
+RUT_FINAL_RE = re.compile(r"^\d{8}-[0-9K]$")
+FINAL_REQUIRED_COLUMNS = [
+    "RUT",
+    "Nombre",
+    "Apoyo_Academico_CIAC",
+    "Talleres",
+    "Mentorias",
+    "Atenciones_Individuales",
+]
 
 
 def normalize_rut(value) -> str:
@@ -432,6 +441,19 @@ def _mark(count: int) -> str:
     return "X" if c == 1 else str(c)
 
 
+def _activity_to_int(value) -> int:
+    if value is None:
+        return 0
+    txt = str(value).strip()
+    if txt == "" or txt.lower() in {"nan", "none", "null"}:
+        return 0
+    if txt.upper() == "X":
+        return 1
+    if re.fullmatch(r"\d+", txt):
+        return int(txt)
+    return 0
+
+
 def build_final_for_campus(base: pd.DataFrame, agg: pd.DataFrame) -> pd.DataFrame:
     out = base.merge(agg, on="RUT_NORM", how="left")
     if "Nombre_best" not in out.columns:
@@ -471,6 +493,65 @@ def build_rut_sin_campus(base_sj: pd.DataFrame, base_vit: pd.DataFrame, agg: pd.
         "Atenciones_Individuales": sin["ATENCION_count"].apply(_mark),
     })
     return out.sort_values("RUT")
+
+
+def validate_and_prepare_outputs(final_sj: pd.DataFrame, final_vit: pd.DataFrame, sin: pd.DataFrame) -> tuple[pd.DataFrame, list[str], list[dict[str, str]]]:
+    errors: list[str] = []
+    report_rows: list[dict[str, str]] = []
+
+    for campus, df in [("SAN_JOAQUIN", final_sj), ("VITACURA", final_vit)]:
+        missing_cols = [c for c in FINAL_REQUIRED_COLUMNS if c not in df.columns]
+        if missing_cols:
+            errors.append(f"{campus}: faltan columnas requeridas: {', '.join(missing_cols)}")
+            report_rows.append({"tipo": "COLUMNAS_FALTANTES", "archivo": f"{campus}_FINAL", "detalle": ", ".join(missing_cols)})
+            continue
+
+        invalid_rut = df[(df["RUT"].astype(str).str.strip() != "") & (~df["RUT"].astype(str).str.strip().str.upper().str.match(RUT_FINAL_RE))]
+        if not invalid_rut.empty:
+            sample = ", ".join(invalid_rut["RUT"].astype(str).head(5).tolist())
+            errors.append(f"{campus}: RUT inválidos en archivo final (formato ########-X). Ejemplos: {sample}")
+            report_rows.append({"tipo": "RUT_FORMATO_INVALIDO", "archivo": f"{campus}_FINAL", "detalle": sample})
+
+        dup = df[df["RUT"].astype(str).str.strip() != ""].duplicated("RUT", keep=False)
+        if dup.any():
+            dup_sample = ", ".join(df.loc[dup, "RUT"].astype(str).drop_duplicates().head(5).tolist())
+            errors.append(f"{campus}: existen RUT duplicados en archivo final. Ejemplos: {dup_sample}")
+            report_rows.append({"tipo": "RUT_DUPLICADO_FINAL", "archivo": f"{campus}_FINAL", "detalle": dup_sample})
+
+    sin_clean = sin.copy()
+    dup_mask = sin_clean["RUT"].astype(str).str.strip() != ""
+    dup_mask = dup_mask & sin_clean.duplicated("RUT", keep="first")
+    dup_count = int(dup_mask.sum())
+    if dup_count > 0:
+        sample = ", ".join(sin_clean.loc[dup_mask, "RUT"].astype(str).head(5).tolist())
+        report_rows.append({
+            "tipo": "RUT_SIN_CAMPUS_DUPLICADOS_DEPURADOS",
+            "archivo": "RUT_SIN_CAMPUS",
+            "detalle": f"Eliminados {dup_count} duplicados. Ejemplos: {sample}",
+        })
+        sin_clean = sin_clean.drop_duplicates(subset=["RUT"], keep="first")
+
+    return sin_clean, errors, report_rows
+
+
+def build_resumen(final_sj: pd.DataFrame, final_vit: pd.DataFrame) -> pd.DataFrame:
+    def metrics(campus: str, df: pd.DataFrame) -> dict[str, int | str]:
+        return {
+            "Campus": campus,
+            "total_estudiantes_unicos": int(df["RUT"].astype(str).str.strip().replace("", pd.NA).dropna().nunique()),
+            "total_ciac": int(df["Apoyo_Academico_CIAC"].apply(_activity_to_int).sum()),
+            "total_talleres": int(df["Talleres"].apply(_activity_to_int).sum()),
+            "total_mentorias": int(df["Mentorias"].apply(_activity_to_int).sum()),
+            "total_atenciones": int(df["Atenciones_Individuales"].apply(_activity_to_int).sum()),
+        }
+
+    row_sj = metrics("SAN_JOAQUIN", final_sj)
+    row_vit = metrics("VITACURA", final_vit)
+
+    both = pd.concat([final_sj, final_vit], ignore_index=True)
+    row_total = metrics("TOTAL", both)
+
+    return pd.DataFrame([row_sj, row_vit, row_total])
 
 
 # =========================
@@ -618,8 +699,8 @@ def run_pipeline(repo_root: Path) -> None:
                 details=f"Detectados {int(rr['nombres_distintos'])} nombres distintos. Ej: {' | '.join(sample)}"
             ))
 
-    qa_df = pd.DataFrame([asdict(i) for i in issues])
-    qa_df.to_csv(out_dir / "REPORTE_CALIDAD_DATOS.csv", index=False, encoding="utf-8-sig")
+    qa_columns = ["issue_type", "file", "sheet", "row", "rut_raw", "rut_norm", "name_raw", "details"]
+    qa_df = pd.DataFrame([asdict(i) for i in issues], columns=qa_columns)
 
     # --- Consolidación ---
     agg = aggregate_activities(activities[["RUT_NORM","Nombre","Actividad","Participaciones"]].copy())
@@ -627,9 +708,28 @@ def run_pipeline(repo_root: Path) -> None:
     final_vit = build_final_for_campus(base_vit, agg)
     sin = build_rut_sin_campus(base_sj, base_vit, agg)
 
+    sin, validation_errors, validation_report_rows = validate_and_prepare_outputs(final_sj, final_vit, sin)
+
+    if validation_report_rows:
+        qa_extra = pd.DataFrame(validation_report_rows)
+        qa_extra = qa_extra.rename(columns={"tipo": "issue_type", "archivo": "file", "detalle": "details"})
+        qa_extra["sheet"] = ""
+        qa_extra["row"] = -1
+        qa_extra["rut_raw"] = ""
+        qa_extra["rut_norm"] = ""
+        qa_extra["name_raw"] = ""
+        qa_df = pd.concat([qa_df, qa_extra[qa_columns]], ignore_index=True)
+
+    resumen = build_resumen(final_sj, final_vit)
+
     final_sj.to_csv(out_dir / "SAN_JOAQUIN_APOYOS_2025_FINAL.csv", index=False, encoding="utf-8-sig")
     final_vit.to_csv(out_dir / "VITACURA_APOYOS_2025_FINAL.csv", index=False, encoding="utf-8-sig")
     sin.to_csv(out_dir / "RUT_SIN_CAMPUS.csv", index=False, encoding="utf-8-sig")
+    resumen.to_csv(out_dir / "RESUMEN_DATAE_2025.csv", index=False, encoding="utf-8-sig")
+    qa_df.to_csv(out_dir / "REPORTE_CALIDAD_DATOS.csv", index=False, encoding="utf-8-sig")
+
+    if validation_errors:
+        raise SystemExit("Validación de salidas falló: " + " | ".join(validation_errors))
 
 
 def main():
