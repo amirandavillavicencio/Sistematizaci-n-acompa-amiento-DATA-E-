@@ -3,3 +3,4 @@ __pycache__/
 _artifacts/
 output/*.xlsx
 output/*.db
+./_artifacts/
