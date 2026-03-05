@@ -1,6 +1,6 @@
 # DATA-E 2025 · Pipeline de apoyos académicos
 
-Pipeline para consolidar apoyos por RUT con reglas corregidas de auditoría (mentorías, atenciones, CIAC, campus, RUT inválidos y trazabilidad por fuente).
+Pipeline para consolidar apoyos por RUT con reglas de auditoría corregidas (mentorías, atenciones, CIAC, talleres, campus, RUT inválidos y trazabilidad por fuente).
 
 ## Ejecución
 
@@ -9,7 +9,7 @@ python3 -m pip install -r requirements.txt
 python3 main.py
 ```
 
-## Qué genera
+## Salidas
 
 ### Versionado (texto/CSV)
 - `output/SAN_JOAQUIN_APOYOS_2025_FINAL.csv`
@@ -19,17 +19,18 @@ python3 main.py
 - `output/auditoria_detalle_corregido.csv`
 
 ### No versionado (binario)
-- Excel consolidado en `./_artifacts/DATAE_APOYOS_2025_INFORME_CORREGIDO.xlsx`
+- `./_artifacts/RESUMEN_DATAE_2025_CORREGIDO.xlsx`
 
-La consola imprime siempre la ruta exacta del Excel generado.
+> El script imprime en consola: `Excel generado en: <ruta>`.
 
-## Validaciones que aplica
+## Qué valida el pipeline
 
-- Normalización y validación robusta de RUT (7-8 dígitos + DV válido).
-- RUT inválidos se excluyen del consolidado y van a `auditoria_detalle_corregido.csv`.
-- CIAC se calcula exclusivamente desde fuentes CIAC (sin falsos positivos por otras hojas).
-- Atenciones individuales = `Katherine(total de sesiones)` + `Gleudys(N° de atenciones)`.
-- Talleres = Proyecto Inicial S1 + Proyecto Inicial S2 + Katherine Talleres.
-- Mentorías = filas de hoja `Mentorías` de Gleudys.
-- Regla de campus: padrón > autodeclarado claro > `SIN_CAMPUS`.
-- Columnas técnicas de trazabilidad por fuente: `SRC_*` y `SRC_FLAGS`.
+- Normalización robusta de RUT: sin puntos, con guion y DV en mayúscula.
+- Validación de RUT (cuerpo 7-8 dígitos + DV correcto).
+- RUT inválidos excluidos de los consolidados y enviados a la hoja `RUT_INVALIDOS`.
+- Atenciones individuales sumadas entre Katherine (`Total de sesiones`) y Gleudys (`N° de atenciones`) por RUT.
+- Mentorías desde Gleudys (`Mentorías`) con conteo por filas por RUT.
+- CIAC recalculado como conteo exacto de filas por RUT de CIAC SJ + CIAC VIT.
+- Talleres sumados entre Proyecto Inicial S1 + S2 + Katherine Talleres.
+- Regla de campus: padrón SJ/VIT > autodeclarado claro > `RUT_SIN_CAMPUS`.
+- Trazabilidad técnica por columnas `SRC_*` y `SRC_FLAGS`.

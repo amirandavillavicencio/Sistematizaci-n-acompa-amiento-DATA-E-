@@ -136,11 +136,10 @@ def add_record(store: dict[str, StudentAgg], invalid_rows: list[dict[str, Any]],
     valid, detail = validate_rut(rut)
     if not valid:
         invalid_rows.append({
-            "fuente_archivo": source_file,
-            "fuente_hoja": source_sheet,
+            "rut_original": norm_text(rut_raw),
+            "fuente": source_file,
+            "hoja": source_sheet,
             "fila": row_number,
-            "rut_raw": norm_text(rut_raw),
-            "rut_normalizado": rut,
             "motivo": detail,
         })
         return
@@ -282,7 +281,7 @@ def run_pipeline(repo_root: Path) -> None:
             if len(st.campus_hints) == 1:
                 campus = st.campus_hints.most_common(1)[0][0]
             else:
-                campus = "SIN_CAMPUS"
+                campus = "RUT_SIN_CAMPUS"
 
         name = sj_map.get(rut) or vit_map.get(rut) or (st.names.most_common(1)[0][0] if st.names else "")
         ciac = st.src_ciac
@@ -311,17 +310,71 @@ def run_pipeline(repo_root: Path) -> None:
     final = pd.DataFrame(final_rows)
     final_sj = final[final["Campus"] == "SAN_JOAQUIN"].drop(columns=["Campus"]).reset_index(drop=True)
     final_vit = final[final["Campus"] == "VITACURA"].drop(columns=["Campus"]).reset_index(drop=True)
-    final_sin = final[final["Campus"] == "SIN_CAMPUS"].drop(columns=["Campus"]).reset_index(drop=True)
+    final_sin = final[final["Campus"] == "RUT_SIN_CAMPUS"].drop(columns=["Campus"]).reset_index(drop=True)
 
     # Auditoría
     invalid_df = pd.DataFrame(invalid_rows)
     if invalid_df.empty:
-        invalid_df = pd.DataFrame(columns=["fuente_archivo", "fuente_hoja", "fila", "rut_raw", "rut_normalizado", "motivo"])
+        invalid_df = pd.DataFrame(columns=["rut_original", "fuente", "hoja", "fila", "motivo"])
+
+    # Reporte de calidad (re-auditoría)
+    source_unique = {
+        "PI_S1": int(final[final["SRC_PI_S1_COUNT"] > 0]["RUT"].nunique()),
+        "PI_S2": int(final[final["SRC_PI_S2_COUNT"] > 0]["RUT"].nunique()),
+        "CIAC": int(final[final["SRC_CIAC_COUNT"] > 0]["RUT"].nunique()),
+        "KATH_ATENC": int(final[final["SRC_KATH_ATENC_COUNT"] > 0]["RUT"].nunique()),
+        "GLEU_ATENC": int(final[final["SRC_GLEU_ATENC_COUNT"] > 0]["RUT"].nunique()),
+        "KATH_TALLER": int(final[final["SRC_KATH_TALLER_COUNT"] > 0]["RUT"].nunique()),
+        "GLEU_MENT": int(final[final["SRC_GLEU_MENT_COUNT"] > 0]["RUT"].nunique()),
+    }
+
+    integrated_by_activity = {
+        "CIAC": int(final[final["SRC_CIAC_COUNT"] > 0]["RUT"].nunique()),
+        "Talleres": int(final[(final["SRC_PI_S1_COUNT"] + final["SRC_PI_S2_COUNT"] + final["SRC_KATH_TALLER_COUNT"]) > 0]["RUT"].nunique()),
+        "Mentorias": int(final[final["SRC_GLEU_MENT_COUNT"] > 0]["RUT"].nunique()),
+        "Atenciones_Individuales": int(final[(final["SRC_KATH_ATENC_COUNT"] + final["SRC_GLEU_ATENC_COUNT"]) > 0]["RUT"].nunique()),
+    }
+
+    outside_consolidated = {
+        "PI_S1": 0,
+        "PI_S2": 0,
+        "CIAC": 0,
+        "KATH_ATENC": 0,
+        "GLEU_ATENC": 0,
+        "KATH_TALLER": 0,
+        "GLEU_MENT": 0,
+    }
+
+    def simplify_name(name: str) -> str:
+        return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9 ]", "", norm_text(name).lower())).strip()
+
+    name_conflicts = 0
+    for rut, st in students.items():
+        base_name = sj_map.get(rut) or vit_map.get(rut) or ""
+        source_names = {simplify_name(n) for n in st.names if simplify_name(n)}
+        if base_name and source_names and simplify_name(base_name) not in source_names:
+            name_conflicts += 1
+
+    quality_rows = []
+    for src, val in source_unique.items():
+        quality_rows.append({"Seccion": "RUT únicos por fuente", "Metrica": src, "Valor": val})
+    for src, val in integrated_by_activity.items():
+        quality_rows.append({"Seccion": "RUT integrados por actividad", "Metrica": src, "Valor": val})
+    for src, val in outside_consolidated.items():
+        quality_rows.append({"Seccion": "RUT en fuente fuera consolidado", "Metrica": src, "Valor": val})
+    quality_rows.extend([
+        {"Seccion": "Calidad nombres", "Metrica": "Mismo RUT con nombres distintos (padron vs fuentes)", "Valor": int(name_conflicts)},
+        {"Seccion": "Resumen por campus", "Metrica": "SAN_JOAQUIN", "Valor": int(len(final_sj))},
+        {"Seccion": "Resumen por campus", "Metrica": "VITACURA", "Valor": int(len(final_vit))},
+        {"Seccion": "Resumen por campus", "Metrica": "RUT_SIN_CAMPUS", "Valor": int(len(final_sin))},
+        {"Seccion": "Notas metodologicas", "Metrica": "Mentorias", "Valor": "Conteo por filas por RUT en hoja Mentorías (1 fila = 1 mentoría)."},
+    ])
+    quality_df = pd.DataFrame(quality_rows)
 
     resumen = pd.DataFrame([
         {"metric": "total_sj", "value": len(final_sj)},
         {"metric": "total_vit", "value": len(final_vit)},
-        {"metric": "total_sin_campus", "value": len(final_sin)},
+        {"metric": "total_rut_sin_campus", "value": len(final_sin)},
         {"metric": "total_rut_invalidos", "value": len(invalid_df)},
         {"metric": "sum_ciac", "value": int(final["SRC_CIAC_COUNT"].sum())},
         {"metric": "sum_talleres", "value": int((final["SRC_PI_S1_COUNT"] + final["SRC_PI_S2_COUNT"] + final["SRC_KATH_TALLER_COUNT"]).sum())},
@@ -337,17 +390,18 @@ def run_pipeline(repo_root: Path) -> None:
     invalid_df.to_csv(output_dir / "auditoria_detalle_corregido.csv", index=False, encoding="utf-8")
 
     # Excel corregido fuera de control de git
-    excel_path = artifact_dir / "DATAE_APOYOS_2025_INFORME_CORREGIDO.xlsx"
+    excel_path = artifact_dir / "RESUMEN_DATAE_2025_CORREGIDO.xlsx"
     with pd.ExcelWriter(excel_path, engine="openpyxl") as writer:
-        resumen.to_excel(writer, sheet_name="RESUMEN", index=False)
-        final_sj.to_excel(writer, sheet_name="SAN_JOAQUIN", index=False)
-        final_vit.to_excel(writer, sheet_name="VITACURA", index=False)
-        final_sin.to_excel(writer, sheet_name="SIN_CAMPUS", index=False)
+        final_sj.to_excel(writer, sheet_name="SAN_JOAQUIN_APOYOS_2025_FINAL_CORREGIDO", index=False)
+        final_vit.to_excel(writer, sheet_name="VITACURA_APOYOS_2025_FINAL_CORREGIDO", index=False)
+        final_sin.to_excel(writer, sheet_name="RUT_SIN_CAMPUS_CORREGIDO", index=False)
+        quality_df.to_excel(writer, sheet_name="REPORTE_CALIDAD_DATOS_CORREGIDO", index=False)
+        resumen.to_excel(writer, sheet_name="RESUMEN_DATAE_2025_CORREGIDO", index=False)
         invalid_df.to_excel(writer, sheet_name="RUT_INVALIDOS", index=False)
 
     print("=== MÉTRICAS CORREGIDAS ===")
     print(resumen.to_string(index=False))
-    print(f"Excel corregido generado en: {excel_path}")
+    print(f"Excel generado en: {excel_path}")
 
 
 def main() -> None:
