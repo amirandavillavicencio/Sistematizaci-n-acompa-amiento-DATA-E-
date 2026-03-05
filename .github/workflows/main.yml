@@ -24,11 +24,13 @@ jobs:
         run: |
           python main.py
 
-      - name: Upload final Excel artifact
+      - name: Upload final outputs artifact
         uses: actions/upload-artifact@v4
         with:
-          name: DATAE_APOYOS_2025_INFORME
-          path: output/DATAE_APOYOS_2025_INFORME.xlsx
+          name: DATAE_APOYOS_2025_OUTPUTS
+          path: |
+            output/DATAE_APOYOS_2025_INFORME.xlsx
+            output/dashboard_apoyos_2025.html
 
       - name: Upload debug artifacts
         uses: actions/upload-artifact@v4
