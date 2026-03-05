@@ -18,21 +18,20 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install pandas openpyxl
+          pip install -r requirements.txt
 
       - name: Run pipeline
         run: |
           python main.py
 
-      - name: Upload outputs
+      - name: Upload final Excel artifact
         uses: actions/upload-artifact@v4
         with:
-          name: DATAE_OUTPUTS
-          path: |
-            output/SAN_JOAQUIN_APOYOS_2025_FINAL.csv
-            output/VITACURA_APOYOS_2025_FINAL.csv
-            output/RUT_SIN_CAMPUS.csv
-            output/REPORTE_CALIDAD_DATOS.csv
-            output/RESUMEN_DATAE_2025.csv
-            output/DATAE_APOYOS_2025_INFORME.xlsx
-            output/datae_apoyos_2025.db
+          name: DATAE_APOYOS_2025_INFORME
+          path: output/DATAE_APOYOS_2025_INFORME.xlsx
+
+      - name: Upload debug artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: DATAE_DEBUG_OUTPUTS
+          path: output/_debug/
