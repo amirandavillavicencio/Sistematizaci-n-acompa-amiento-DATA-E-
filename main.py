@@ -570,6 +570,70 @@ def export_outputs_to_sqlite(out_dir: Path) -> None:
             df.to_sql(table_name, conn, if_exists="replace", index=False)
 
 
+def _auto_adjust_worksheet(worksheet) -> None:
+    worksheet.freeze_panes = "A2"
+    for column_cells in worksheet.columns:
+        header = str(column_cells[0].value or "")
+        max_length = len(header)
+        for cell in column_cells[1:]:
+            value = "" if cell.value is None else str(cell.value)
+            if len(value) > max_length:
+                max_length = len(value)
+        worksheet.column_dimensions[column_cells[0].column_letter].width = max_length + 2
+
+
+def export_excel_report(out_dir: Path, final_sj: pd.DataFrame, final_vit: pd.DataFrame) -> None:
+    def metric_sum(df: pd.DataFrame, col: str) -> int:
+        return int(df[col].apply(_activity_to_int).sum())
+
+    resumen_general = pd.DataFrame([
+        {
+            "Indicador": "Estudiantes_unicos",
+            "San_Joaquin": int(final_sj["RUT"].astype(str).str.strip().replace("", pd.NA).dropna().nunique()),
+            "Vitacura": int(final_vit["RUT"].astype(str).str.strip().replace("", pd.NA).dropna().nunique()),
+        },
+        {
+            "Indicador": "Apoyo_CIAC",
+            "San_Joaquin": metric_sum(final_sj, "Apoyo_Academico_CIAC"),
+            "Vitacura": metric_sum(final_vit, "Apoyo_Academico_CIAC"),
+        },
+        {
+            "Indicador": "Talleres",
+            "San_Joaquin": metric_sum(final_sj, "Talleres"),
+            "Vitacura": metric_sum(final_vit, "Talleres"),
+        },
+        {
+            "Indicador": "Mentorias",
+            "San_Joaquin": metric_sum(final_sj, "Mentorias"),
+            "Vitacura": metric_sum(final_vit, "Mentorias"),
+        },
+        {
+            "Indicador": "Atenciones_Individuales",
+            "San_Joaquin": metric_sum(final_sj, "Atenciones_Individuales"),
+            "Vitacura": metric_sum(final_vit, "Atenciones_Individuales"),
+        },
+    ])
+    resumen_general["Total"] = resumen_general["San_Joaquin"] + resumen_general["Vitacura"]
+    resumen_general = resumen_general[["Indicador", "San_Joaquin", "Vitacura", "Total"]]
+
+    sheet_sources = {
+        "SAN_JOAQUIN": out_dir / "SAN_JOAQUIN_APOYOS_2025_FINAL.csv",
+        "VITACURA": out_dir / "VITACURA_APOYOS_2025_FINAL.csv",
+        "RUT_SIN_CAMPUS": out_dir / "RUT_SIN_CAMPUS.csv",
+        "REPORTE_CALIDAD": out_dir / "REPORTE_CALIDAD_DATOS.csv",
+    }
+    sheet_data = {name: pd.read_csv(path, dtype=str, keep_default_na=False) for name, path in sheet_sources.items()}
+
+    report_path = out_dir / "DATAE_APOYOS_2025_INFORME.xlsx"
+    with pd.ExcelWriter(report_path, engine="openpyxl") as writer:
+        resumen_general.to_excel(writer, sheet_name="RESUMEN_GENERAL", index=False)
+        for sheet_name in ["SAN_JOAQUIN", "VITACURA", "RUT_SIN_CAMPUS", "REPORTE_CALIDAD"]:
+            sheet_data[sheet_name].to_excel(writer, sheet_name=sheet_name, index=False)
+
+        for worksheet in writer.book.worksheets:
+            _auto_adjust_worksheet(worksheet)
+
+
 # =========================
 # Pipeline principal
 # =========================
@@ -743,6 +807,7 @@ def run_pipeline(repo_root: Path) -> None:
     sin.to_csv(out_dir / "RUT_SIN_CAMPUS.csv", index=False, encoding="utf-8-sig")
     resumen.to_csv(out_dir / "RESUMEN_DATAE_2025.csv", index=False, encoding="utf-8-sig")
     qa_df.to_csv(out_dir / "REPORTE_CALIDAD_DATOS.csv", index=False, encoding="utf-8-sig")
+    export_excel_report(out_dir, final_sj, final_vit)
     export_outputs_to_sqlite(out_dir)
 
     if validation_errors:

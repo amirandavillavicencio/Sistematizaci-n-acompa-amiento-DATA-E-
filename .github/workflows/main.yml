@@ -34,4 +34,5 @@ jobs:
             output/RUT_SIN_CAMPUS.csv
             output/REPORTE_CALIDAD_DATOS.csv
             output/RESUMEN_DATAE_2025.csv
+            output/DATAE_APOYOS_2025_INFORME.xlsx
             output/datae_apoyos_2025.db
