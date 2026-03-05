@@ -44,6 +44,8 @@ python3 main.py
 - `output/VITACURA_APOYOS_2025_FINAL.csv`
 - `output/RUT_SIN_CAMPUS.csv`
 - `output/REPORTE_CALIDAD_DATOS.csv`
+- `output/RESUMEN_DATAE_2025.csv`
+- `output/datae_apoyos_2025.db` (SQLite con tablas `san_joaquin_apoyos`, `vitacura_apoyos`, `rut_sin_campus`, `reporte_calidad`)
 
 Las bases finales contienen estas columnas:
 

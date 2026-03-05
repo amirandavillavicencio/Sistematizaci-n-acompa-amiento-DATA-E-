@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import sqlite3
 from pathlib import Path
 from dataclasses import dataclass, asdict
 from unicodedata import normalize as unicode_normalize
@@ -554,6 +555,21 @@ def build_resumen(final_sj: pd.DataFrame, final_vit: pd.DataFrame) -> pd.DataFra
     return pd.DataFrame([row_sj, row_vit, row_total])
 
 
+def export_outputs_to_sqlite(out_dir: Path) -> None:
+    db_path = out_dir / "datae_apoyos_2025.db"
+    table_sources = {
+        "san_joaquin_apoyos": out_dir / "SAN_JOAQUIN_APOYOS_2025_FINAL.csv",
+        "vitacura_apoyos": out_dir / "VITACURA_APOYOS_2025_FINAL.csv",
+        "rut_sin_campus": out_dir / "RUT_SIN_CAMPUS.csv",
+        "reporte_calidad": out_dir / "REPORTE_CALIDAD_DATOS.csv",
+    }
+
+    with sqlite3.connect(db_path) as conn:
+        for table_name, csv_path in table_sources.items():
+            df = pd.read_csv(csv_path, dtype=str, keep_default_na=False).fillna("")
+            df.to_sql(table_name, conn, if_exists="replace", index=False)
+
+
 # =========================
 # Pipeline principal
 # =========================
@@ -727,6 +743,7 @@ def run_pipeline(repo_root: Path) -> None:
     sin.to_csv(out_dir / "RUT_SIN_CAMPUS.csv", index=False, encoding="utf-8-sig")
     resumen.to_csv(out_dir / "RESUMEN_DATAE_2025.csv", index=False, encoding="utf-8-sig")
     qa_df.to_csv(out_dir / "REPORTE_CALIDAD_DATOS.csv", index=False, encoding="utf-8-sig")
+    export_outputs_to_sqlite(out_dir)
 
     if validation_errors:
         raise SystemExit("Validación de salidas falló: " + " | ".join(validation_errors))
