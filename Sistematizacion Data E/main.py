@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from pathlib import Path
 from dataclasses import dataclass, asdict
 
@@ -165,24 +166,42 @@ def _detect_source(path: Path) -> str:
 
 
 def _col(df: pd.DataFrame, *candidates: str) -> str | None:
-    cols = {c.lower().strip(): c for c in df.columns}
+    cols = {_norm_colname(c): c for c in df.columns}
     for cand in candidates:
-        key = cand.lower().strip()
+        key = _norm_colname(cand)
         if key in cols:
             return cols[key]
     return None
 
 
+def _norm_colname(value: str) -> str:
+    s = str(value).strip().lower()
+    s = unicodedata.normalize("NFKD", s)
+    s = "".join(ch for ch in s if not unicodedata.combining(ch))
+    s = re.sub(r"[^a-z0-9]+", " ", s)
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
+
+
 def _find_col_contains(df: pd.DataFrame, needle: str) -> str | None:
-    needle = needle.lower()
+    needle = _norm_colname(needle)
     for c in df.columns:
-        if needle in str(c).lower():
+        if needle in _norm_colname(c):
+            return c
+    return None
+
+
+def _find_col_by_tokens(df: pd.DataFrame, *tokens: str) -> str | None:
+    wanted = {_norm_colname(t) for t in tokens}
+    for c in df.columns:
+        parts = set(_norm_colname(c).split())
+        if parts & wanted:
             return c
     return None
 
 
 def extract_base_campus(df: pd.DataFrame, campus: str, source_file: str, source_sheet: str) -> pd.DataFrame:
-    rut_col = _col(df, "Rut", "RUT", "RUN") or _find_col_contains(df, "rut") or _find_col_contains(df, "run")
+    rut_col = _col(df, "Rut", "RUT", "RUN") or _find_col_by_tokens(df, "rut", "run")
     dv_col = _col(df, "DV", "Dígito Verificador", "Digito Verificador") or _find_col_contains(df, "dv")
 
     ap1 = _col(df, "Apellido 1", "Apellido1", "Apellido P", "Apellido Paterno") or _find_col_contains(df, "apellido 1")
@@ -221,7 +240,7 @@ def extract_activity_rows(source: str, df: pd.DataFrame, sheet_name: str, file_n
     rows = []
 
     if source == "TALLERES_PI":
-        rut_col = _find_col_contains(df, "rut")
+        rut_col = _find_col_by_tokens(df, "rut", "run")
         nom = _col(df, "Nombre") or _find_col_contains(df, "nombre")
         ap = _col(df, "Apellido Paterno") or _find_col_contains(df, "apellido paterno")
         am = _col(df, "Apellido Materno") or _find_col_contains(df, "apellido materno")
@@ -233,7 +252,7 @@ def extract_activity_rows(source: str, df: pd.DataFrame, sheet_name: str, file_n
                 rows.append((rut_raw, rut_norm, name, ACT_TALLER, 1, file_name, sheet_name, i))
 
     elif source == "CIAC_SJ":
-        rut_col = _col(df, "RUN", "Run") or _find_col_contains(df, "run")
+        rut_col = _col(df, "RUN", "Run") or _find_col_by_tokens(df, "run", "rut")
         if rut_col:
             for i in range(len(df)):
                 rut_raw = df.at[i, rut_col]
@@ -241,7 +260,7 @@ def extract_activity_rows(source: str, df: pd.DataFrame, sheet_name: str, file_n
                 rows.append((rut_raw, rut_norm, "", ACT_CIAC, 1, file_name, sheet_name, i))
 
     elif source == "CIAC_VIT":
-        run_col = _find_col_contains(df, "run")
+        run_col = _find_col_by_tokens(df, "run", "rut")
         dv_col = _find_col_contains(df, "dígito") or _find_col_contains(df, "digito") or _find_col_contains(df, "dv")
         if run_col:
             for i in range(len(df)):
@@ -274,7 +293,7 @@ def extract_activity_rows(source: str, df: pd.DataFrame, sheet_name: str, file_n
                 n = max(1, n)
                 rows.append((rut_raw, rut_norm, name, ACT_ATENCION, n, file_name, sheet_name, i))
         else:
-            rut_col = _find_col_contains(df, "rut")
+            rut_col = _find_col_by_tokens(df, "rut", "run")
             nom_col = _col(df, "Nombre") or _find_col_contains(df, "nombre")
             if rut_col:
                 for i in range(len(df)):
@@ -284,7 +303,7 @@ def extract_activity_rows(source: str, df: pd.DataFrame, sheet_name: str, file_n
                     rows.append((rut_raw, rut_norm, name, ACT_TALLER, 1, file_name, sheet_name, i))
 
     elif source == "GLEUDYS":
-        rut_col = _col(df, "RUT") or _find_col_contains(df, "rut")
+        rut_col = _col(df, "RUT") or _find_col_by_tokens(df, "rut", "run")
         if rut_col:
             ap = _col(df, "Apellido p", "Apellido P", "Apellido Paterno") or _find_col_contains(df, "apellido p")
             am = _col(df, "Apellido m", "Apellido M", "Apellido Materno") or _find_col_contains(df, "apellido m")
