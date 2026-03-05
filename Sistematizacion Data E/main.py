@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 from dataclasses import dataclass, asdict
+from unicodedata import normalize as unicode_normalize
 
 import pandas as pd
 
@@ -165,29 +166,78 @@ def _detect_source(path: Path) -> str:
 
 
 def _col(df: pd.DataFrame, *candidates: str) -> str | None:
-    cols = {c.lower().strip(): c for c in df.columns}
+    cols = {_norm_col_name(c): c for c in df.columns}
     for cand in candidates:
-        key = cand.lower().strip()
+        key = _norm_col_name(cand)
         if key in cols:
             return cols[key]
     return None
 
 
 def _find_col_contains(df: pd.DataFrame, needle: str) -> str | None:
-    needle = needle.lower()
+    needle = _norm_col_name(needle)
     for c in df.columns:
-        if needle in str(c).lower():
+        if needle in _norm_col_name(c):
             return c
     return None
 
 
-def extract_base_campus(df: pd.DataFrame, campus: str, source_file: str, source_sheet: str) -> pd.DataFrame:
-    rut_col = _col(df, "Rut", "RUT", "RUN") or _find_col_contains(df, "rut") or _find_col_contains(df, "run")
-    dv_col = _col(df, "DV", "Dígito Verificador", "Digito Verificador") or _find_col_contains(df, "dv")
+def _norm_col_name(value: str) -> str:
+    txt = str(value).strip().lower()
+    txt = unicode_normalize("NFKD", txt).encode("ascii", "ignore").decode("ascii")
+    txt = re.sub(r"[^a-z0-9]+", " ", txt)
+    return re.sub(r"\s+", " ", txt).strip()
 
-    ap1 = _col(df, "Apellido 1", "Apellido1", "Apellido P", "Apellido Paterno") or _find_col_contains(df, "apellido 1")
-    ap2 = _col(df, "Apellido 2", "Apellido2", "Apellido M", "Apellido Materno") or _find_col_contains(df, "apellido 2")
-    nom = _col(df, "Nombres", "Nombre", "NOMBRE") or _find_col_contains(df, "nombres") or _find_col_contains(df, "nombre")
+
+def _find_col_by_tokens(df: pd.DataFrame, groups: list[set[str]]) -> str | None:
+    """
+    Busca una columna donde cada grupo de tokens tenga al menos una coincidencia.
+    Ejemplo groups=[{"apellido"},{"paterno","1"}] detecta "Apellido Paterno" o "Apellido 1".
+    """
+    for c in df.columns:
+        norm = _norm_col_name(c)
+        tokens = set(norm.split())
+        if all(any(g in tokens for g in group) for group in groups):
+            return c
+    return None
+
+
+def _detect_rut_and_dv_cols(df: pd.DataFrame) -> tuple[str | None, str | None]:
+    rut_col = (
+        _col(df, "Rut", "RUT", "RUN", "R.U.N", "R.U.T")
+        or _find_col_by_tokens(df, [{"rut", "run"}])
+        or _find_col_contains(df, "rut")
+        or _find_col_contains(df, "run")
+    )
+    dv_col = (
+        _col(df, "DV", "Dígito Verificador", "Digito Verificador", "D.V")
+        or _find_col_by_tokens(df, [{"digito", "dv"}, {"verificador", "v"}])
+        or _find_col_contains(df, "digito verificador")
+        or _find_col_contains(df, "dv")
+    )
+    return rut_col, dv_col
+
+
+def _detect_name_cols(df: pd.DataFrame) -> tuple[str | None, str | None, str | None]:
+    ap1 = (
+        _col(df, "Apellido 1", "Apellido1", "Apellido P", "Apellido Paterno")
+        or _find_col_by_tokens(df, [{"apellido"}, {"paterno", "1", "p"}])
+    )
+    ap2 = (
+        _col(df, "Apellido 2", "Apellido2", "Apellido M", "Apellido Materno")
+        or _find_col_by_tokens(df, [{"apellido"}, {"materno", "2", "m"}])
+    )
+    nom = (
+        _col(df, "Nombres", "Nombre", "NOMBRE")
+        or _find_col_by_tokens(df, [{"nombre", "nombres"}])
+        or _find_col_contains(df, "nombre")
+    )
+    return ap1, ap2, nom
+
+
+def extract_base_campus(df: pd.DataFrame, campus: str, source_file: str, source_sheet: str) -> pd.DataFrame:
+    rut_col, dv_col = _detect_rut_and_dv_cols(df)
+    ap1, ap2, nom = _detect_name_cols(df)
 
     rut_raw = df[rut_col].astype(str) if rut_col else pd.Series([""] * len(df))
     if dv_col:
@@ -221,10 +271,8 @@ def extract_activity_rows(source: str, df: pd.DataFrame, sheet_name: str, file_n
     rows = []
 
     if source == "TALLERES_PI":
-        rut_col = _find_col_contains(df, "rut")
-        nom = _col(df, "Nombre") or _find_col_contains(df, "nombre")
-        ap = _col(df, "Apellido Paterno") or _find_col_contains(df, "apellido paterno")
-        am = _col(df, "Apellido Materno") or _find_col_contains(df, "apellido materno")
+        rut_col, _ = _detect_rut_and_dv_cols(df)
+        ap, am, nom = _detect_name_cols(df)
         if rut_col:
             for i in range(len(df)):
                 rut_raw = df.at[i, rut_col]
@@ -233,7 +281,7 @@ def extract_activity_rows(source: str, df: pd.DataFrame, sheet_name: str, file_n
                 rows.append((rut_raw, rut_norm, name, ACT_TALLER, 1, file_name, sheet_name, i))
 
     elif source == "CIAC_SJ":
-        rut_col = _col(df, "RUN", "Run") or _find_col_contains(df, "run")
+        rut_col, _ = _detect_rut_and_dv_cols(df)
         if rut_col:
             for i in range(len(df)):
                 rut_raw = df.at[i, rut_col]
@@ -241,8 +289,7 @@ def extract_activity_rows(source: str, df: pd.DataFrame, sheet_name: str, file_n
                 rows.append((rut_raw, rut_norm, "", ACT_CIAC, 1, file_name, sheet_name, i))
 
     elif source == "CIAC_VIT":
-        run_col = _find_col_contains(df, "run")
-        dv_col = _find_col_contains(df, "dígito") or _find_col_contains(df, "digito") or _find_col_contains(df, "dv")
+        run_col, dv_col = _detect_rut_and_dv_cols(df)
         if run_col:
             for i in range(len(df)):
                 run_raw = str(df.at[i, run_col]).strip()
@@ -254,12 +301,9 @@ def extract_activity_rows(source: str, df: pd.DataFrame, sheet_name: str, file_n
     elif source == "KATHERINE":
         cols = [c.lower() for c in df.columns]
         if "total de sesiones" in cols or any("total" in c and "sesion" in c for c in cols):
-            rut_col = _col(df, "Rut") or _find_col_contains(df, "rut")
-            dv_col = _col(df, "DV") or _find_col_contains(df, "dv")
+            rut_col, dv_col = _detect_rut_and_dv_cols(df)
             tot_col = _col(df, "Total de sesiones") or _find_col_contains(df, "total de sesiones") or _find_col_contains(df, "sesiones")
-            ap1 = _col(df, "Apellido 1") or _find_col_contains(df, "apellido 1")
-            ap2 = _col(df, "Apellido 2") or _find_col_contains(df, "apellido 2")
-            nom = _col(df, "Nombres") or _find_col_contains(df, "nombres")
+            ap1, ap2, nom = _detect_name_cols(df)
 
             for i in range(len(df)):
                 r = str(df.at[i, rut_col]) if rut_col else ""
@@ -274,8 +318,8 @@ def extract_activity_rows(source: str, df: pd.DataFrame, sheet_name: str, file_n
                 n = max(1, n)
                 rows.append((rut_raw, rut_norm, name, ACT_ATENCION, n, file_name, sheet_name, i))
         else:
-            rut_col = _find_col_contains(df, "rut")
-            nom_col = _col(df, "Nombre") or _find_col_contains(df, "nombre")
+            rut_col, _ = _detect_rut_and_dv_cols(df)
+            _, _, nom_col = _detect_name_cols(df)
             if rut_col:
                 for i in range(len(df)):
                     rut_raw = df.at[i, rut_col]
@@ -284,11 +328,9 @@ def extract_activity_rows(source: str, df: pd.DataFrame, sheet_name: str, file_n
                     rows.append((rut_raw, rut_norm, name, ACT_TALLER, 1, file_name, sheet_name, i))
 
     elif source == "GLEUDYS":
-        rut_col = _col(df, "RUT") or _find_col_contains(df, "rut")
+        rut_col, _ = _detect_rut_and_dv_cols(df)
         if rut_col:
-            ap = _col(df, "Apellido p", "Apellido P", "Apellido Paterno") or _find_col_contains(df, "apellido p")
-            am = _col(df, "Apellido m", "Apellido M", "Apellido Materno") or _find_col_contains(df, "apellido m")
-            nom = _col(df, "Nombres", "Nombre") or _find_col_contains(df, "nombres") or _find_col_contains(df, "nombre")
+            ap, am, nom = _detect_name_cols(df)
 
             sname = sheet_name.lower()
             if "micro" in sname:
