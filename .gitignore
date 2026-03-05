@@ -1,2 +1,5 @@
 __pycache__/
-output/*.csv
+*.pyc
+_artifacts/
+output/*.xlsx
+output/*.db

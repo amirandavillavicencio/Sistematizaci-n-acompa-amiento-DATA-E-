@@ -1,33 +1,6 @@
-# DATA-E 2025 · Pipeline de apoyos académicos (Key = RUT)
+# DATA-E 2025 · Pipeline de apoyos académicos
 
-Este repositorio automatiza la **limpieza, validación y consolidación** de registros de apoyos académicos del programa **DATA-E 2025**.
-
-**Regla principal:** el identificador (key) para integrar todas las fuentes es el **RUT** normalizado.
-
----
-
-## Objetivo del pipeline
-
-A partir de múltiples archivos Excel/CSV (talleres, atenciones, mentorías, CIAC, etc.), el pipeline:
-
-1. Lee automáticamente los archivos desde `/data`
-2. Normaliza el **RUT** a un formato estándar (`########-X`)
-3. Ejecuta validaciones de calidad de datos (QA)
-4. Clasifica y agrega participaciones por tipo de actividad
-5. Consolida resultados por campus usando las listas base
-6. Genera salidas finales listas para entregar en `/output`
-
----
-
-## Estructura del repositorio
-
-- `data/`
-- `output/`
-- `main.py`
-- `requirements.txt`
-- `README.md`
-
----
+Pipeline para consolidar apoyos por RUT con reglas corregidas de auditoría (mentorías, atenciones, CIAC, campus, RUT inválidos y trazabilidad por fuente).
 
 ## Ejecución
 
@@ -36,22 +9,27 @@ python3 -m pip install -r requirements.txt
 python3 main.py
 ```
 
----
+## Qué genera
 
-## Archivos de salida esperados
-
+### Versionado (texto/CSV)
 - `output/SAN_JOAQUIN_APOYOS_2025_FINAL.csv`
 - `output/VITACURA_APOYOS_2025_FINAL.csv`
 - `output/RUT_SIN_CAMPUS.csv`
-- `output/REPORTE_CALIDAD_DATOS.csv`
-- `output/RESUMEN_DATAE_2025.csv`
-- `output/datae_apoyos_2025.db` (SQLite con tablas `san_joaquin_apoyos`, `vitacura_apoyos`, `rut_sin_campus`, `reporte_calidad`)
+- `output/auditoria_resumen_corregido.csv`
+- `output/auditoria_detalle_corregido.csv`
 
-Las bases finales contienen estas columnas:
+### No versionado (binario)
+- Excel consolidado en `./_artifacts/DATAE_APOYOS_2025_INFORME_CORREGIDO.xlsx`
 
-- `RUT`
-- `Nombre`
-- `Apoyo_Academico_CIAC`
-- `Talleres`
-- `Mentorias`
-- `Atenciones_Individuales`
+La consola imprime siempre la ruta exacta del Excel generado.
+
+## Validaciones que aplica
+
+- Normalización y validación robusta de RUT (7-8 dígitos + DV válido).
+- RUT inválidos se excluyen del consolidado y van a `auditoria_detalle_corregido.csv`.
+- CIAC se calcula exclusivamente desde fuentes CIAC (sin falsos positivos por otras hojas).
+- Atenciones individuales = `Katherine(total de sesiones)` + `Gleudys(N° de atenciones)`.
+- Talleres = Proyecto Inicial S1 + Proyecto Inicial S2 + Katherine Talleres.
+- Mentorías = filas de hoja `Mentorías` de Gleudys.
+- Regla de campus: padrón > autodeclarado claro > `SIN_CAMPUS`.
+- Columnas técnicas de trazabilidad por fuente: `SRC_*` y `SRC_FLAGS`.
