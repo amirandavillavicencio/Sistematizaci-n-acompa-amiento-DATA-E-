@@ -9,7 +9,10 @@ from typing import Any
 import pandas as pd
 from openpyxl import load_workbook
 
+from src.export_sqlite import export_excel_to_sqlite
+
 OUTPUT_FILE = "DATAE_APOYOS_2025_INFORME.xlsx"
+SQLITE_OUTPUT_FILE = "datae_apoyos_2025.db"
 SHEET_ORDER = [
     "RESUMEN_GENERAL",
     "SAN_JOAQUIN",
@@ -433,6 +436,9 @@ def run_pipeline(repo_root: Path) -> None:
 
     apply_sheet_format(out_xlsx)
     print(f"Excel generado: {out_xlsx}")
+
+    sqlite_out = output_dir / SQLITE_OUTPUT_FILE
+    export_excel_to_sqlite(out_xlsx, sqlite_out, repo_root)
 
 
 def main() -> None:
