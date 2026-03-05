@@ -13,6 +13,8 @@ import pandas as pd
 # =========================
 
 SUPPORTED_EXT = {".xlsx", ".xls", ".csv"}
+REQUIRED_FILES = {"main.py", "requirements.txt"}
+REQUIRED_DIRS = {"data", "output"}
 
 ACT_CIAC = "CIAC"
 ACT_TALLER = "TALLER"
@@ -130,6 +132,26 @@ class RutIssue:
 
 def list_data_files(data_dir: Path) -> list[Path]:
     return sorted([p for p in data_dir.glob("*") if p.is_file() and p.suffix.lower() in SUPPORTED_EXT])
+
+
+def verify_repo_structure(repo_root: Path) -> None:
+    data_dir = repo_root / "data"
+    out_dir = repo_root / "output"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    missing_files = sorted([f for f in REQUIRED_FILES if not (repo_root / f).is_file()])
+    missing_dirs = sorted([d for d in REQUIRED_DIRS if not (repo_root / d).is_dir()])
+    if missing_files or missing_dirs:
+        problems = []
+        if missing_dirs:
+            problems.append(f"directorios faltantes: {', '.join(missing_dirs)}")
+        if missing_files:
+            problems.append(f"archivos faltantes: {', '.join(missing_files)}")
+        raise SystemExit("Estructura de repositorio incompleta: " + " | ".join(problems))
+
+    files = list_data_files(data_dir)
+    if not files:
+        raise SystemExit(f"No se encontraron archivos Excel/CSV en {data_dir}.")
 
 
 def read_file_all_sheets(path: Path) -> dict[str, pd.DataFrame]:
@@ -456,6 +478,8 @@ def build_rut_sin_campus(base_sj: pd.DataFrame, base_vit: pd.DataFrame, agg: pd.
 # =========================
 
 def run_pipeline(repo_root: Path) -> None:
+    verify_repo_structure(repo_root)
+
     data_dir = repo_root / "data"
     out_dir = repo_root / "output"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -471,6 +495,7 @@ def run_pipeline(repo_root: Path) -> None:
     issues: list[RutIssue] = []
 
     for f in files:
+        print(f"Procesando: {f.name}")
         source = _detect_source(f)
         sheets = read_file_all_sheets(f)
 
