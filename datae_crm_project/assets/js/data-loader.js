@@ -14,7 +14,8 @@ function normalizeRecord(raw, index) {
   const conteoTalleres = toInt(raw.conteo_talleres);
   const conteoMentorias = toInt(raw.conteo_mentorias);
   const conteoAtenciones = toInt(raw.conteo_atenciones);
-  const total = toInt(raw.total_apoyos) || conteoCiac + conteoTalleres + conteoMentorias + conteoAtenciones;
+  const conteoTutoriaPar = toInt(raw.conteo_tutoria_par || raw.tutoria_par);
+  const total = toInt(raw.total_apoyos) || conteoCiac + conteoTalleres + conteoMentorias + conteoAtenciones + conteoTutoriaPar;
 
   return {
     id: toInt(raw.id) || index + 1,
@@ -27,10 +28,12 @@ function normalizeRecord(raw, index) {
     talleres: Boolean(raw.talleres),
     mentorias: Boolean(raw.mentorias),
     atenciones: Boolean(raw.atenciones),
+    tutoria_par: Boolean(raw.tutoria_par),
     conteo_ciac: conteoCiac,
     conteo_talleres: conteoTalleres,
     conteo_mentorias: conteoMentorias,
     conteo_atenciones: conteoAtenciones,
+    conteo_tutoria_par: conteoTutoriaPar,
     total_apoyos: total,
     tiene_apoyo: Boolean(raw.tiene_apoyo ?? total > 0),
     sin_campus: Boolean(raw.sin_campus),
@@ -39,6 +42,7 @@ function normalizeRecord(raw, index) {
     fuentes_detectadas: Array.isArray(raw.fuentes_detectadas) ? raw.fuentes_detectadas : [],
     issues_count: toInt(raw.issues_count),
     issue_types: Array.isArray(raw.issue_types) ? raw.issue_types : [],
+    semestre: raw.semestre || raw.periodo || '',
   };
 }
 
