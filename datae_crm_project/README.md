@@ -1,18 +1,29 @@
-# DATA-E CRM académico (estático)
+# DATA-E CRM académico (estático y desplegable en Vercel)
 
-Aplicación web tipo CRM para seguimiento de apoyos académicos 2025 en DATA-E, desplegable como sitio estático (Vercel o cualquier hosting de archivos).
+Mini CRM académico para seguimiento de apoyos DATA-E. Está construido como aplicación estática con JavaScript modular y consume datos desde `./data/`.
 
-## Estructura del proyecto
+## Qué incluye
+
+- KPIs dinámicos de operación académica.
+- Filtros globales (nombre/RUT, campus, tipo de apoyo, con/sin apoyo y registros sin campus).
+- Tabla CRM principal con ordenamiento, paginación, búsqueda global (por filtro), exportación CSV y botón de detalle.
+- Panel de detalle por estudiante con observaciones de calidad.
+- Gráficos de apoyo por campus, tipo de apoyo, estado de apoyo y registros sin campus.
+
+## Stack
+
+- **Bootstrap 5 (CDN)** para layout y componentes.
+- **Chart.js (CDN)** para visualizaciones.
+- **JavaScript ES Modules** sin dependencias pesadas adicionales.
+
+## Estructura relevante
 
 ```text
-/
+datae_crm_project/
 ├── index.html
-├── README.md
-├── requirements.txt
 ├── vercel.json
 ├── assets/
-│   ├── css/
-│   │   └── styles.css
+│   ├── css/styles.css
 │   └── js/
 │       ├── app.js
 │       ├── data-loader.js
@@ -22,93 +33,58 @@ Aplicación web tipo CRM para seguimiento de apoyos académicos 2025 en DATA-E, 
 │       └── ui.js
 ├── data/
 │   ├── apoyos_consolidados.json
-│   ├── DATEapoyosFInal.xlsx
-│   ├── REPORTE_CALIDAD_DATOS.csv
-│   ├── RESUMEN_DATAE_2025.csv
-│   ├── RUT_SIN_CAMPUS.csv
 │   ├── SAN_JOAQUIN_APOYOS_2025_FINAL.csv
-│   └── VITACURA_APOYOS_2025_FINAL.csv
-└── scripts/
-    └── build_data.py
+│   ├── VITACURA_APOYOS_2025_FINAL.csv
+│   ├── RUT_SIN_CAMPUS.csv
+│   └── REPORTE_CALIDAD_DATOS.csv
+└── scripts/build_data.py
 ```
 
-## Cómo funciona la app
+## Flujo de datos (prioridad y fallback)
 
-- **Fuente principal frontend:** `./data/apoyos_consolidados.json`.
-- **Tecnologías:** Bootstrap 5 (layout), Tabulator (tabla CRM), Chart.js (gráficos), JavaScript modular ES.
-- **Comportamiento CRM:**
-  - filtros globales (búsqueda, campus, tipo de apoyo, estado, calidad)
-  - KPIs ejecutivos actualizados por filtros
-  - tabla principal con paginación, orden y exportación CSV
-  - panel de detalle por estudiante (click en fila)
-  - gráficos de apoyo y calidad
+1. Frontend intenta cargar **`./data/apoyos_consolidados.json`** (fuente prioritaria).
+2. Si el JSON no existe o no cumple estructura mínima, frontend usa fallback y consolida en runtime desde:
+   - `SAN_JOAQUIN_APOYOS_2025_FINAL.csv`
+   - `VITACURA_APOYOS_2025_FINAL.csv`
+   - `RUT_SIN_CAMPUS.csv`
+   - `REPORTE_CALIDAD_DATOS.csv`
 
-## Fuente de datos y consolidación
+## Script de consolidación
 
-El JSON consolidado se crea con `scripts/build_data.py`, integrando:
+`python scripts/build_data.py`
 
-- `SAN_JOAQUIN_APOYOS_2025_FINAL.csv`
-- `VITACURA_APOYOS_2025_FINAL.csv`
-- `RUT_SIN_CAMPUS.csv`
-- `REPORTE_CALIDAD_DATOS.csv`
+### Qué hace
 
-Además, en metadatos se deja trazabilidad con:
-- `RESUMEN_DATAE_2025.csv`
-- `DATEapoyosFInal.xlsx`
-
-### Re-generar `apoyos_consolidados.json`
-
-1. Crear entorno y dependencias:
-
-```bash
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-2. Ejecutar script:
-
-```bash
-python scripts/build_data.py
-```
-
-3. Resultado:
-
-- Se actualiza `data/apoyos_consolidados.json` con:
-  - `meta` (fecha, fuentes, conteo)
+- Valida columnas esperadas de los CSV de campus.
+- Normaliza RUT y nombres.
+- Consolida por RUT en un único registro por estudiante.
+- Calcula métricas (`ciac`, `talleres`, `mentorias`, `atenciones`, `total_apoyos`).
+- Integra observaciones desde `SRC_FLAGS` y `REPORTE_CALIDAD_DATOS.csv`.
+- Genera `data/apoyos_consolidados.json` con:
+  - `meta`
   - `quality_summary`
-  - `records` (1 registro consolidado por RUT)
+  - `records`
 
-## Inconsistencias detectadas y documentadas
+## Inconsistencias de origen tratadas
 
-Durante la consolidación se detectan y/o reflejan estas inconsistencias de origen:
+- **RUT sin campus**: se mantiene como `Sin Campus`.
+- **Nombres vacíos**: se normaliza a `Sin nombre`.
+- **Campos de conteo con formatos heterogéneos**: se convierten de forma segura a entero (`safe_int`).
+- **Calidad de datos**: se agregan issues por RUT y se concatenan detalles para contexto operativo.
 
-1. **RUT sin campus asociado**
-   - Existen registros en `RUT_SIN_CAMPUS.csv` (ej. casos sin clasificación campus).
-2. **Nombres faltantes en registros sin campus**
-   - Algunos RUT vienen sin `Nombre`; se normaliza como `Sin nombre`.
-3. **Issues de calidad explícitos**
-   - `REPORTE_CALIDAD_DATOS.csv` contiene múltiples tipos de issue (p. ej. `REGISTRO_SIN_RUT`).
-4. **Campos heterogéneos de apoyo**
-   - En columnas de apoyo existen marcas tipo `X` y/o valores numéricos; la consolidación usa conteos `SRC_*` para consistencia.
+## Desarrollo local
 
-## Despliegue en Vercel
-
-Este proyecto es estático:
-
-1. Importar repo en Vercel.
-2. Configurar **Root Directory** al directorio del proyecto (`datae_crm_project`, si corresponde en tu repo).
-3. No requiere build command.
-4. Publicar.
-
-`vercel.json` mantiene `cleanUrls: true` y rutas relativas (`./assets/...`, `./data/...`) compatibles con el despliegue.
-
-## Desarrollo local rápido
-
-Puedes abrir `index.html` con un servidor estático para evitar restricciones de `fetch` en `file://`:
+Para evitar restricciones de `fetch` en `file://`, levantar un servidor estático:
 
 ```bash
+cd datae_crm_project
 python -m http.server 8000
 ```
 
-Luego visitar: `http://localhost:8000`.
+Abrir: `http://localhost:8000`
+
+## Despliegue en Vercel
+
+- Proyecto estático (sin build).
+- Configurar root directory en `datae_crm_project`.
+- Rutas relativas (`./assets/...`, `./data/...`) compatibles con Vercel.
