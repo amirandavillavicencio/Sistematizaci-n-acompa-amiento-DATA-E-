@@ -92,6 +92,15 @@ function runUpdate(elements) {
   }
 }
 
+function syncCampusSelectorButtons(elements) {
+  const selectedCampus = state.filters.campus || 'Todos';
+  elements.campusButtons.forEach((button) => {
+    const isActive = button.dataset.campus === selectedCampus;
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
+}
+
 function bindFilters(elements) {
   elements.searchInput.addEventListener('input', (e) => {
     state.filters.search = e.target.value;
@@ -107,6 +116,17 @@ function bindFilters(elements) {
   ].forEach(([id, key]) => {
     elements[id].addEventListener('change', (e) => {
       state.filters[key] = e.target.value;
+      if (key === 'campus') syncCampusSelectorButtons(elements);
+      runUpdate(elements);
+    });
+  });
+
+  elements.campusButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const selectedCampus = button.dataset.campus;
+      state.filters.campus = selectedCampus;
+      elements.campusFilter.value = selectedCampus;
+      syncCampusSelectorButtons(elements);
       runUpdate(elements);
     });
   });
@@ -119,6 +139,7 @@ function bindFilters(elements) {
     elements.supportStatusFilter.value = 'Todos';
     elements.sourceFilter.value = 'Todas';
     elements.semesterFilter.value = 'Todos';
+    syncCampusSelectorButtons(elements);
     runUpdate(elements);
   });
 }
@@ -132,6 +153,7 @@ async function init() {
     supportStatusFilter: document.getElementById('supportStatusFilter'),
     sourceFilter: document.getElementById('sourceFilter'),
     semesterFilter: document.getElementById('semesterFilter'),
+    campusButtons: Array.from(document.querySelectorAll('.campus-btn')),
     clearFiltersBtn: document.getElementById('clearFiltersBtn'),
     recordsCounter: document.getElementById('recordsCounter'),
     missingCampusCounter: document.getElementById('missingCampusCounter'),
@@ -152,6 +174,8 @@ async function init() {
 
   const options = hydrateFilterOptions(state.records);
   fillSelect(elements.campusFilter, options.campuses);
+  elements.campusFilter.value = state.filters.campus;
+  syncCampusSelectorButtons(elements);
   fillSelect(elements.supportTypeFilter, options.supportTypes);
   fillSelect(elements.supportStatusFilter, options.supportStatus);
   fillSelect(elements.sourceFilter, options.sources);

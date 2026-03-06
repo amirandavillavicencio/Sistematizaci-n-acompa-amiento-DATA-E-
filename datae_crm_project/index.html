@@ -9,7 +9,7 @@
   <link href="./assets/css/styles.css" rel="stylesheet" />
 </head>
 <body>
-  <main class="container-fluid crm-app py-4 py-xl-5 px-3 px-lg-4 px-xxl-5">
+  <main class="crm-app dashboard-container py-4 py-xl-5">
     <header class="crm-header mb-4">
       <div class="header-main">
         <span class="crm-badge">DATA-E 2025 · Consolidado institucional oficial</span>
@@ -21,6 +21,17 @@
         <strong id="generatedAt">—</strong>
       </aside>
     </header>
+
+    <section class="dashboard-section dashboard-section-campus">
+      <article class="crm-card campus-selector-card">
+        <div class="campus-selector-label">Campus principal</div>
+        <div class="campus-selector" role="group" aria-label="Selector principal de campus">
+          <button type="button" class="campus-btn active" data-campus="Todos">Todos</button>
+          <button type="button" class="campus-btn" data-campus="San Joaquín">San Joaquín</button>
+          <button type="button" class="campus-btn" data-campus="Vitacura">Vitacura</button>
+        </div>
+      </article>
+    </section>
 
     <section class="dashboard-section">
       <div class="section-heading">
@@ -201,7 +212,7 @@
   </main>
 
   <footer class="app-footer">
-    <div class="container-fluid crm-app px-3 px-lg-4 px-xxl-5">
+    <div class="crm-app dashboard-container footer-container">
       <div class="footer-content">
         <span>Realizado por <strong>Andrés Miranda</strong></span>
         <span class="footer-separator" aria-hidden="true">•</span>
