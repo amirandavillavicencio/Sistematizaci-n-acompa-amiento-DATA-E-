@@ -23,11 +23,28 @@ body {
 }
 
 .crm-app {
-  max-width: 1700px;
+  width: 100%;
+}
+
+.dashboard-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+.footer-container {
+  padding-left: 24px;
+  padding-right: 24px;
 }
 
 .dashboard-section {
-  margin-bottom: 1.6rem;
+  margin-top: 32px;
+}
+
+.dashboard-section:first-of-type,
+.dashboard-section-campus {
+  margin-top: 0;
 }
 
 .section-heading {
@@ -124,7 +141,7 @@ body {
   background: var(--card-bg);
   border: 1px solid var(--line);
   border-radius: var(--radius-card);
-  padding: var(--card-padding);
+  padding: 1.2rem;
   box-shadow: var(--shadow);
 }
 
@@ -235,6 +252,50 @@ body {
 .filters-card {
   padding-top: 1rem;
   padding-bottom: 1rem;
+}
+
+
+.campus-selector-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.campus-selector-label {
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.campus-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 0.1rem;
+}
+
+.campus-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid #d0d6e0;
+  background: white;
+  cursor: pointer;
+  color: #1f2a44;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.campus-btn:hover {
+  border-color: #98acd2;
+  background: #f7faff;
+}
+
+.campus-btn.active {
+  background: #2f5fe3;
+  color: white;
+  border-color: #2f5fe3;
 }
 
 .btn {
@@ -613,8 +674,14 @@ canvas {
 }
 
 @media (max-width: 767px) {
+  .dashboard-container,
+  .footer-container {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
   .crm-card {
-    padding: 0.96rem;
+    padding: 1rem;
   }
 
   .chart-wrap {
