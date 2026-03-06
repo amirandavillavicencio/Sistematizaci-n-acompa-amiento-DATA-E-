@@ -1,60 +1,51 @@
 import { loadConsolidatedData } from './data-loader.js';
 import { applyFilters, createFilterState, hydrateFilterOptions, resetFilterState } from './filters.js';
-import { createMainTable } from './table.js';
+import { createMainTable, renderMissingCampusTable } from './table.js';
 import { createCharts, updateCharts } from './charts.js';
 import { fillSelect, renderDetail, renderKpis, updateCounters } from './ui.js';
 
 const state = {
-  allRecords: [],
-  filteredRecords: [],
-  selectedRecord: null,
+  records: [],
+  filtered: [],
   filters: createFilterState(),
+  selected: null,
 };
 
 let table;
 let charts;
 
 function runUpdate(elements) {
-  state.filteredRecords = applyFilters(state.allRecords, state.filters);
-  renderKpis(elements.kpiGrid, state.filteredRecords);
-  updateCounters(elements.recordsCounter, elements.missingCampusCounter, state.filteredRecords);
-  table.setRows(state.filteredRecords);
-  updateCharts(charts, state.filteredRecords);
+  state.filtered = applyFilters(state.records, state.filters);
+  renderKpis(elements.kpiGrid, state.filtered);
+  updateCounters(elements.recordsCounter, elements.missingCampusCounter, state.filtered);
+  table.setRows(state.filtered);
+  renderMissingCampusTable('missingCampusTable', state.filtered.filter((row) => row.sin_campus));
+  updateCharts(charts, state.filtered);
 
-  const stillVisible = state.selectedRecord
-    ? state.filteredRecords.find((row) => row.id === state.selectedRecord.id)
-    : null;
-
+  const stillVisible = state.selected ? state.filtered.find((row) => row.id === state.selected.id) : null;
   if (!stillVisible) {
-    state.selectedRecord = null;
+    state.selected = null;
     renderDetail(elements.detailPanel, null);
   }
 }
 
-function bindFilterEvents(elements) {
-  elements.searchInput.addEventListener('input', (event) => {
-    state.filters.search = event.target.value;
+function bindFilters(elements) {
+  elements.searchInput.addEventListener('input', (e) => {
+    state.filters.search = e.target.value;
     runUpdate(elements);
   });
 
-  elements.campusFilter.addEventListener('change', (event) => {
-    state.filters.campus = event.target.value;
-    runUpdate(elements);
-  });
-
-  elements.supportTypeFilter.addEventListener('change', (event) => {
-    state.filters.supportType = event.target.value;
-    runUpdate(elements);
-  });
-
-  elements.supportStatusFilter.addEventListener('change', (event) => {
-    state.filters.supportStatus = event.target.value;
-    runUpdate(elements);
-  });
-
-  elements.missingCampusFilter.addEventListener('change', (event) => {
-    state.filters.missingCampus = event.target.value;
-    runUpdate(elements);
+  [
+    ['campusFilter', 'campus'],
+    ['supportTypeFilter', 'supportType'],
+    ['supportStatusFilter', 'supportStatus'],
+    ['missingCampusFilter', 'missingCampus'],
+    ['sourceFilter', 'source'],
+  ].forEach(([id, key]) => {
+    elements[id].addEventListener('change', (e) => {
+      state.filters[key] = e.target.value;
+      runUpdate(elements);
+    });
   });
 
   elements.clearFiltersBtn.addEventListener('click', () => {
@@ -64,6 +55,7 @@ function bindFilterEvents(elements) {
     elements.supportTypeFilter.value = 'Todos';
     elements.supportStatusFilter.value = 'Todos';
     elements.missingCampusFilter.value = 'Todos';
+    elements.sourceFilter.value = 'Todas';
     runUpdate(elements);
   });
 }
@@ -76,6 +68,7 @@ async function init() {
     supportTypeFilter: document.getElementById('supportTypeFilter'),
     supportStatusFilter: document.getElementById('supportStatusFilter'),
     missingCampusFilter: document.getElementById('missingCampusFilter'),
+    sourceFilter: document.getElementById('sourceFilter'),
     clearFiltersBtn: document.getElementById('clearFiltersBtn'),
     recordsCounter: document.getElementById('recordsCounter'),
     missingCampusCounter: document.getElementById('missingCampusCounter'),
@@ -85,32 +78,30 @@ async function init() {
   };
 
   const data = await loadConsolidatedData();
-  state.allRecords = data.records;
-  elements.generatedAt.textContent = data.generatedAt;
+  state.records = data.records;
+  elements.generatedAt.textContent = new Date(data.generatedAt).toLocaleString('es-CL');
 
-  const options = hydrateFilterOptions(state.allRecords);
+  const options = hydrateFilterOptions(state.records);
   fillSelect(elements.campusFilter, options.campuses);
   fillSelect(elements.supportTypeFilter, options.supportTypes);
   fillSelect(elements.supportStatusFilter, options.supportStatus);
   fillSelect(elements.missingCampusFilter, options.missingCampus);
+  fillSelect(elements.sourceFilter, options.sources);
 
   table = createMainTable('crmTable', (record) => {
-    state.selectedRecord = record;
+    state.selected = record;
     renderDetail(elements.detailPanel, record);
   });
-
   charts = createCharts();
 
-  elements.exportCsvBtn.addEventListener('click', () => {
-    table.exportCsv('crm_academico_filtrado.csv');
-  });
+  elements.exportCsvBtn.addEventListener('click', () => table.exportCsv('crm_academico_filtrado.csv'));
 
-  bindFilterEvents(elements);
+  bindFilters(elements);
   runUpdate(elements);
 }
 
 init().catch((error) => {
-  console.error(error);
   const app = document.querySelector('.crm-app');
-  app.innerHTML = `<div class="alert alert-danger">Error al iniciar la aplicación: ${error.message}</div>`;
+  app.innerHTML = `<div class="alert alert-danger">Error al iniciar CRM: ${error.message}</div>`;
+  console.error(error);
 });
