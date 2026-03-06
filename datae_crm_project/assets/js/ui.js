@@ -1,50 +1,48 @@
-function formatNumber(value) {
-  return Number(value).toLocaleString('es-CL');
-}
+const formatNumber = (value) => Number(value || 0).toLocaleString('es-CL');
 
-export function fillSelect(selectElement, values) {
-  selectElement.innerHTML = values.map((value) => `<option value="${value}">${value}</option>`).join('');
+export function fillSelect(select, options) {
+  select.innerHTML = options.map((opt) => `<option value="${opt}">${opt}</option>`).join('');
 }
 
 export function renderKpis(container, rows) {
-  const totalStudents = rows.length;
-  const totalCiac = rows.reduce((acc, row) => acc + row.ciac, 0);
-  const totalTalleres = rows.reduce((acc, row) => acc + row.talleres, 0);
-  const totalMentorias = rows.reduce((acc, row) => acc + row.mentorias, 0);
-  const totalAtenciones = rows.reduce((acc, row) => acc + row.atenciones, 0);
-  const withSupport = rows.filter((row) => row.total_apoyos > 0).length;
-  const withoutSupport = totalStudents - withSupport;
-  const withoutCampus = rows.filter((row) => !row.tiene_campus).length;
-  const supportPercent = totalStudents ? ((withSupport / totalStudents) * 100).toFixed(1) : '0.0';
+  const baseSJ = rows.filter((row) => row.origen_base === 'San Joaquín').length;
+  const baseVit = rows.filter((row) => row.origen_base === 'Vitacura').length;
+  const total = rows.length;
+  const conApoyo = rows.filter((row) => row.tiene_apoyo).length;
+  const sinApoyo = total - conApoyo;
+  const ciac = rows.reduce((acc, row) => acc + row.conteo_ciac, 0);
+  const talleres = rows.reduce((acc, row) => acc + row.conteo_talleres, 0);
+  const mentorias = rows.reduce((acc, row) => acc + row.conteo_mentorias, 0);
+  const atenciones = rows.reduce((acc, row) => acc + row.conteo_atenciones, 0);
+  const sinCampus = rows.filter((row) => row.sin_campus).length;
+  const pct = total ? ((conApoyo / total) * 100).toFixed(1) : '0.0';
 
   const cards = [
-    ['Total estudiantes únicos', formatNumber(totalStudents), 'Registros únicos en el filtro actual'],
-    ['Total CIAC', formatNumber(totalCiac), 'Participaciones CIAC acumuladas'],
-    ['Total talleres', formatNumber(totalTalleres), 'Participaciones en talleres'],
-    ['Total mentorías', formatNumber(totalMentorias), 'Sesiones de mentoría'],
-    ['Total atenciones', formatNumber(totalAtenciones), 'Atenciones individuales'],
-    ['% estudiantes con apoyo', `${supportPercent}%`, 'Con al menos un apoyo registrado'],
-    ['Total con apoyo', formatNumber(withSupport), 'Estado: Con apoyo'],
-    ['Total sin apoyo', formatNumber(withoutSupport), 'Estado: Sin apoyo'],
-    ['Registros sin campus', formatNumber(withoutCampus), 'Pendientes de clasificación'],
+    ['Base San Joaquín', formatNumber(baseSJ)],
+    ['Base Vitacura', formatNumber(baseVit)],
+    ['Total estudiantes únicos', formatNumber(total)],
+    ['Total con apoyo', formatNumber(conApoyo)],
+    ['Total sin apoyo', formatNumber(sinApoyo)],
+    ['Participaciones CIAC', formatNumber(ciac)],
+    ['Participaciones Talleres', formatNumber(talleres)],
+    ['Participaciones Mentorías', formatNumber(mentorias)],
+    ['Participaciones Atenciones', formatNumber(atenciones)],
+    ['Total RUT sin campus', formatNumber(sinCampus)],
+    ['% estudiantes con apoyo', `${pct}%`],
   ];
 
-  container.innerHTML = cards
-    .map(
-      ([label, value, hint]) => `
-      <article class="kpi-card">
-        <div class="kpi-label">${label}</div>
-        <div class="kpi-value">${value}</div>
-        <div class="kpi-hint">${hint}</div>
-      </article>`,
-    )
-    .join('');
+  container.innerHTML = cards.map(([label, value]) => `
+    <article class="kpi-card">
+      <div class="kpi-label">${label}</div>
+      <div class="kpi-value">${value}</div>
+    </article>
+  `).join('');
 }
 
 export function renderDetail(container, record) {
   if (!record) {
     container.className = 'empty-state';
-    container.textContent = 'Selecciona una fila para ver información del estudiante.';
+    container.textContent = 'Selecciona una fila para ver detalle.';
     return;
   }
 
@@ -53,23 +51,28 @@ export function renderDetail(container, record) {
     <div>
       <p class="detail-name">${record.nombre}</p>
       <p class="detail-meta">RUT: ${record.rut} · Campus: ${record.campus}</p>
+      <p class="detail-meta">Presencia en lista base: ${record.presencia_lista_base ? 'Sí' : 'No'} · Origen base: ${record.origen_base}</p>
     </div>
     <div class="detail-stats">
-      <div class="stat-item"><span>CIAC</span><strong>${record.ciac}</strong></div>
-      <div class="stat-item"><span>Talleres</span><strong>${record.talleres}</strong></div>
-      <div class="stat-item"><span>Mentorías</span><strong>${record.mentorias}</strong></div>
-      <div class="stat-item"><span>Atenciones</span><strong>${record.atenciones}</strong></div>
+      <div class="stat-item"><span>CIAC</span><strong>${record.conteo_ciac}</strong></div>
+      <div class="stat-item"><span>Talleres</span><strong>${record.conteo_talleres}</strong></div>
+      <div class="stat-item"><span>Mentorías</span><strong>${record.conteo_mentorias}</strong></div>
+      <div class="stat-item"><span>Atenciones</span><strong>${record.conteo_atenciones}</strong></div>
       <div class="stat-item"><span>Total apoyos</span><strong>${record.total_apoyos}</strong></div>
       <div class="stat-item"><span>Estado</span><strong>${record.estado}</strong></div>
     </div>
     <div>
-      <small class="text-muted d-block mb-1">Observaciones de calidad</small>
-      <div>${record.observaciones || 'Sin observaciones registradas.'}</div>
-    </div>`;
+      <small class="text-muted d-block mb-1">Fuentes detectadas</small>
+      <div>${record.fuentes_detectadas.join(', ') || 'Sin fuentes identificadas'}</div>
+    </div>
+    <div>
+      <small class="text-muted d-block mb-1">Observaciones/calidad</small>
+      <div>${record.observacion_calidad || 'Sin observaciones registradas.'}</div>
+    </div>
+  `;
 }
 
-export function updateCounters(recordsCounter, missingCampusCounter, rows) {
-  const missing = rows.filter((row) => !row.tiene_campus).length;
+export function updateCounters(recordsCounter, missingCounter, rows) {
   recordsCounter.textContent = `${formatNumber(rows.length)} resultados`;
-  missingCampusCounter.textContent = `${formatNumber(missing)} sin campus`;
+  missingCounter.textContent = `${formatNumber(rows.filter((row) => row.sin_campus).length)} sin campus`;
 }
