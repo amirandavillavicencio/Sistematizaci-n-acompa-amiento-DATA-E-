@@ -1,12 +1,12 @@
 :root {
-  --bg: #edf2f7;
+  --bg: #eef2f7;
   --card-bg: #ffffff;
-  --line: #d8e1ec;
-  --line-soft: #e8eef6;
-  --muted: #64748b;
-  --title: #0f172a;
-  --primary: #1e40af;
-  --primary-soft: #eff4ff;
+  --line: #d4dde9;
+  --line-soft: #e5ebf3;
+  --muted: #5f6f86;
+  --title: #0b1a33;
+  --primary: #173a8a;
+  --primary-soft: #edf3ff;
   --ok-soft: #dcfce7;
   --ok-text: #166534;
   --radius-card: 1rem;
@@ -18,7 +18,7 @@
 body {
   margin: 0;
   font-family: 'Inter', sans-serif;
-  background: linear-gradient(180deg, #f3f6fb 0%, var(--bg) 100%);
+  background: linear-gradient(180deg, #f4f6fa 0%, var(--bg) 100%);
   color: #1e293b;
 }
 
@@ -27,12 +27,30 @@ body {
 }
 
 .dashboard-section {
-  margin-bottom: 1.4rem;
+  margin-bottom: 1.45rem;
 }
 
 .section-heading {
   margin-bottom: 0.65rem;
   padding-inline: 0.1rem;
+}
+
+.dashboard-section .crm-card {
+  border-top: 3px solid transparent;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.section-heading::before {
+  content: '';
+  width: 28px;
+  height: 2px;
+  background: #9fb3d8;
+  border-radius: 999px;
 }
 
 .section-heading h2 {
@@ -66,7 +84,7 @@ body {
   text-transform: uppercase;
   border-radius: 999px;
   color: var(--primary);
-  border: 1px solid #c9d7ff;
+  border: 1px solid #bccdee;
   background: var(--primary-soft);
   padding: 0.24rem 0.68rem;
 }
@@ -80,7 +98,7 @@ body {
 }
 
 .crm-header p {
-  color: #475569;
+  color: #3f526c;
   font-size: 0.92rem;
   line-height: 1.45;
   margin: 0;
@@ -89,6 +107,7 @@ body {
 .header-meta-card {
   background: var(--card-bg);
   border: 1px solid var(--line);
+  border-top: 3px solid #9fb3d8;
   border-radius: var(--radius-card);
   padding: 0.82rem 1rem;
   min-width: 250px;
@@ -620,4 +639,35 @@ canvas {
   .footer-separator {
     display: none;
   }
+}
+
+
+.narrative-card {
+  border-top-color: #8da7d6 !important;
+  margin-bottom: 0.15rem;
+}
+
+.isolated-section-card {
+  border-top-color: #6f7f99 !important;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafd 100%);
+}
+
+.method-card {
+  border-top-color: #7f9acc !important;
+  background: linear-gradient(180deg, #ffffff 0%, #f7fafe 100%);
+}
+
+.exports-card {
+  border-top-color: #7d95bf !important;
+}
+
+.method-list li {
+  line-height: 1.48;
+}
+
+#exportsPanel .btn {
+  border-style: solid;
+  border-width: 1px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
 }
