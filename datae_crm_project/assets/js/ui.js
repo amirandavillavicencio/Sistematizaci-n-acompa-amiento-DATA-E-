@@ -32,7 +32,7 @@ export function renderKpis(container, summary) {
 export function renderDetail(container, record) {
   if (!record) {
     container.className = 'empty-state';
-    container.innerHTML = '<p class="mb-0">Selecciona una fila para desplegar un resumen detallado del estudiante, su trazabilidad y sus apoyos registrados.</p>';
+    container.innerHTML = '<div><strong>Sin estudiante seleccionado</strong><p class="mb-0">Selecciona una fila del consolidado para revisar rápidamente el detalle, la trazabilidad y los apoyos registrados.</p></div>';
     return;
   }
 
@@ -55,12 +55,12 @@ export function renderDetail(container, record) {
       <div class="stat-item"><span>Total apoyos</span><strong>${record.total_apoyos}</strong></div>
       <div class="stat-item"><span>Estado</span><strong>${record.tiene_apoyo ? 'Con apoyo' : 'Sin apoyo'}</strong></div>
     </div>
-    <div>
-      <small class="text-muted d-block mb-1">Origen / trazabilidad resumida</small>
+    <div class="detail-group">
+      <p class="detail-group-label">Origen y trazabilidad resumida</p>
       <div class="detail-panel-box">${record.fuentes_detectadas.join(', ') || 'Sin fuentes identificadas'}</div>
     </div>
-    <div>
-      <small class="text-muted d-block mb-1">Observaciones de consolidación</small>
+    <div class="detail-group">
+      <p class="detail-group-label">Observaciones de consolidación</p>
       <div class="detail-panel-box">${record.observacion_calidad || 'Sin observaciones registradas.'}</div>
     </div>
   `;
@@ -79,7 +79,7 @@ export function renderQualityChecks(container, campusRows, missingCampusRows, qu
       <div class="quality-item"><span>Registros con nombre faltante</span><strong>${formatNumber(nombresFaltantes)}</strong></div>
       <div class="quality-item"><span>Posibles inconsistencias de conteo</span><strong>${formatNumber(inconsistenciasConteo)}</strong></div>
       <div class="quality-item"><span>RUT con issues de calidad reportados</span><strong>${formatNumber(qualitySummary.total_rut_con_issues)}</strong></div>
-      <div class="quality-note">Advertencia metodológica: cuando no existe conteo robusto por sesión, el consolidado usa marca de participación para no perder trazabilidad.</div>
+      <div class="quality-note">Nota metodológica: cuando no existe conteo robusto por sesión, el consolidado utiliza marca de participación para resguardar trazabilidad.</div>
     </div>
   `;
 }
