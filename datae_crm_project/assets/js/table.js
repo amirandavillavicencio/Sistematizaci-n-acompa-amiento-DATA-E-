@@ -102,7 +102,7 @@ export function createMainTable(containerId, onRowSelected) {
             <td class="numeric">${row.conteo_mentorias}</td>
             <td class="numeric">${row.conteo_ciac}</td>
             <td class="numeric">${row.total_apoyos}</td>
-            <td><span class="status-badge ${row.tiene_apoyo ? 'status-ok' : 'status-empty'}">${row.tiene_apoyo ? 'Sí' : 'No'}</span></td>
+            <td><span class="status-badge ${row.tiene_apoyo ? 'status-ok' : 'status-empty'}">${row.tiene_apoyo ? 'Con apoyo' : 'Sin apoyo'}</span></td>
             <td title="${escapeHtml((row.fuentes_detectadas || []).join(', ') || '—')}">${escapeHtml((row.fuentes_detectadas || []).join(', ') || '—')}</td>
             <td title="${escapeHtml(row.observacion_calidad || '—')}">${escapeHtml(row.observacion_calidad || '—')}</td>
             <td><button class="btn btn-sm btn-outline-primary table-action" data-detail="${row.id}">Detalle</button></td>

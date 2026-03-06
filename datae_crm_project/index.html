@@ -37,10 +37,10 @@
 
     <section class="dashboard-section">
       <div class="section-heading">
-        <h2>Consolidado por campus</h2>
+        <h2>Filtros del consolidado</h2>
       </div>
       <article class="crm-card filters-card">
-        <div class="row g-3 align-items-end">
+        <div class="row g-3 align-items-end filter-bar-row">
           <div class="col-12 col-lg-4 col-xxl-3">
             <label class="form-label" for="searchInput">Buscar nombre o RUT</label>
             <input id="searchInput" class="form-control" type="search" placeholder="Ej: 12.345.678-9 / apellido" />
@@ -62,7 +62,7 @@
             <select id="sourceFilter" class="form-select"></select>
           </div>
           <div class="col-12 col-xxl-1 d-grid d-xxl-flex justify-content-xxl-end">
-            <button id="clearFiltersBtn" class="btn btn-outline-secondary btn-clean">Limpiar</button>
+            <button id="clearFiltersBtn" class="btn btn-outline-secondary btn-clean">Limpiar filtros</button>
           </div>
         </div>
       </article>
@@ -82,7 +82,7 @@
         <div class="col-12 col-xxl-4">
           <article class="crm-card h-100 detail-card">
             <h2>Detalle estudiante</h2>
-            <div id="detailPanel" class="empty-state">Selecciona una fila para ver detalle.</div>
+            <div id="detailPanel" class="empty-state">Seleccione un estudiante para ver detalle.</div>
           </article>
         </div>
       </div>
