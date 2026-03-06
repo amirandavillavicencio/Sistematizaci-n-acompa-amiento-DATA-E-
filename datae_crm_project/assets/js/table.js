@@ -2,13 +2,14 @@ const COLUMNS = [
   { key: 'rut', label: 'RUT', type: 'text' },
   { key: 'nombre', label: 'Nombre', type: 'text' },
   { key: 'campus', label: 'Campus', type: 'text' },
-  { key: 'conteo_ciac', label: 'CIAC', type: 'number' },
+  { key: 'conteo_atenciones', label: 'Atención individual', type: 'number' },
   { key: 'conteo_talleres', label: 'Talleres', type: 'number' },
-  { key: 'conteo_mentorias', label: 'Mentorías', type: 'number' },
-  { key: 'conteo_atenciones', label: 'Atenciones', type: 'number' },
+  { key: 'conteo_mentorias', label: 'Mentoría', type: 'number' },
+  { key: 'conteo_ciac', label: 'Apoyo CIAC', type: 'number' },
   { key: 'total_apoyos', label: 'Total apoyos', type: 'number' },
-  { key: 'estado', label: 'Estado', type: 'text' },
-  { key: 'observacion_calidad', label: 'Observaciones/calidad', type: 'text' },
+  { key: 'estado', label: 'Con apoyo', type: 'text' },
+  { key: 'fuentes_detectadas', label: 'Origen registro', type: 'text' },
+  { key: 'observacion_calidad', label: 'Notas consolidación', type: 'text' },
 ];
 
 const escapeHtml = (value = '') => value.toString()
@@ -19,25 +20,28 @@ const escapeHtml = (value = '') => value.toString()
 function sortRows(rows, key, direction, type) {
   const data = [...rows].sort((a, b) => {
     if (type === 'number') return Number(a[key] || 0) - Number(b[key] || 0);
-    return String(a[key] || '').localeCompare(String(b[key] || ''), 'es');
+    const aVal = Array.isArray(a[key]) ? a[key].join(', ') : String(a[key] || '');
+    const bVal = Array.isArray(b[key]) ? b[key].join(', ') : String(b[key] || '');
+    return aVal.localeCompare(bVal, 'es');
   });
   return direction === 'asc' ? data : data.reverse();
 }
 
 function toCsv(rows) {
-  const headers = ['RUT', 'Nombre', 'Campus', 'CIAC', 'Talleres', 'Mentorías', 'Atenciones', 'Total apoyos', 'Estado', 'Observación'];
+  const headers = ['rut', 'nombre', 'campus', 'atencion_individual', 'talleres', 'tutoria_par', 'mentoria', 'apoyo_ciac', 'con_apoyo', 'origen_registro', 'observaciones'];
   const lines = [headers.join(',')];
   rows.forEach((row) => {
     const cells = [
       row.rut,
       row.nombre,
       row.campus,
-      row.conteo_ciac,
-      row.conteo_talleres,
-      row.conteo_mentorias,
       row.conteo_atenciones,
-      row.total_apoyos,
-      row.estado,
+      row.conteo_talleres,
+      0,
+      row.conteo_mentorias,
+      row.conteo_ciac,
+      row.tiene_apoyo ? 1 : 0,
+      (row.fuentes_detectadas || []).join(' | '),
       row.observacion_calidad || '',
     ].map((v) => `"${String(v).replaceAll('"', '""')}"`);
     lines.push(cells.join(','));
@@ -57,8 +61,8 @@ function download(content, filename) {
   URL.revokeObjectURL(url);
 }
 
-function buildSimpleTable(rows) {
-  if (!rows.length) return '<div class="text-muted">Sin registros sin campus para los filtros actuales.</div>';
+function buildSimpleTable(rows, emptyMessage = 'Sin registros para los filtros actuales.') {
+  if (!rows.length) return `<div class="text-muted">${emptyMessage}</div>`;
   const body = rows.slice(0, 200).map((row) => `
     <tr>
       <td>${escapeHtml(row.rut)}</td>
@@ -69,8 +73,8 @@ function buildSimpleTable(rows) {
     </tr>
   `).join('');
 
-  return `<div class="table-shell"><table class="crm-table"><thead><tr>
-    <th>RUT</th><th>Nombre</th><th>Total apoyos</th><th>Fuentes</th><th>Observaciones</th>
+  return `<div class="table-shell"><table class="crm-table crm-table-compact"><thead><tr>
+    <th>RUT</th><th>Nombre</th><th>Total apoyos</th><th>Origen</th><th>Observaciones</th>
   </tr></thead><tbody>${body}</tbody></table></div>`;
 }
 
@@ -93,16 +97,17 @@ export function createMainTable(containerId, onRowSelected) {
             <td>${escapeHtml(row.rut)}</td>
             <td>${escapeHtml(row.nombre)}</td>
             <td>${escapeHtml(row.campus)}</td>
-            <td class="numeric">${row.conteo_ciac}</td>
+            <td class="numeric">${row.conteo_atenciones}</td>
             <td class="numeric">${row.conteo_talleres}</td>
             <td class="numeric">${row.conteo_mentorias}</td>
-            <td class="numeric">${row.conteo_atenciones}</td>
+            <td class="numeric">${row.conteo_ciac}</td>
             <td class="numeric">${row.total_apoyos}</td>
-            <td><span class="status-badge ${row.tiene_apoyo ? 'status-ok' : 'status-empty'}">${row.estado}</span></td>
+            <td><span class="status-badge ${row.tiene_apoyo ? 'status-ok' : 'status-empty'}">${row.tiene_apoyo ? 'Sí' : 'No'}</span></td>
+            <td>${escapeHtml((row.fuentes_detectadas || []).join(', ') || '—')}</td>
             <td>${escapeHtml(row.observacion_calidad || '—')}</td>
             <td><button class="btn btn-sm btn-outline-primary" data-detail="${row.id}">Detalle</button></td>
           </tr>`).join('')
-      : '<tr><td colspan="11" class="text-center py-4 text-muted">Sin resultados para los filtros actuales.</td></tr>';
+      : '<tr><td colspan="12" class="text-center py-4 text-muted">Sin resultados para los filtros actuales.</td></tr>';
 
     container.innerHTML = `
       <div class="table-shell"><table class="crm-table"><thead><tr>${headers}<th>Acción</th></tr></thead><tbody>${body}</tbody></table></div>
@@ -151,7 +156,16 @@ export function createMainTable(containerId, onRowSelected) {
   };
 }
 
+export function createCompactCampusTable(containerId) {
+  const container = document.getElementById(containerId);
+  return {
+    setRows(rows) {
+      container.innerHTML = buildSimpleTable(rows, 'Sin registros para este campus con los filtros actuales.');
+    },
+  };
+}
+
 export function renderMissingCampusTable(containerId, rows) {
   const container = document.getElementById(containerId);
-  container.innerHTML = buildSimpleTable(rows);
+  container.innerHTML = buildSimpleTable(rows, 'Sin registros sin campus disponibles.');
 }

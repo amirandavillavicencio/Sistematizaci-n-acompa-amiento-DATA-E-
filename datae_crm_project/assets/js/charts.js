@@ -4,7 +4,8 @@ function buildChart(id, config) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom' } },
+      animation: false,
+      plugins: { legend: { position: 'bottom' }, tooltip: { enabled: true } },
       ...config.options,
     },
   });
@@ -14,7 +15,7 @@ export function createCharts() {
   return {
     campus: buildChart('chartCampus', {
       type: 'bar',
-      data: { labels: [], datasets: [{ label: 'Participaciones totales', data: [], backgroundColor: ['#1d4ed8', '#2563eb', '#64748b'] }] },
+      data: { labels: [], datasets: [{ label: 'Estudiantes con apoyo', data: [], backgroundColor: ['#1d4ed8', '#2563eb'] }] },
       options: { scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } },
     }),
     supportType: buildChart('chartSupportType', {
@@ -33,15 +34,18 @@ export function createCharts() {
   };
 }
 
-export function updateCharts(charts, rows) {
+export function updateCharts(charts, rows, missingCampusRows = []) {
   const campusTotals = rows.reduce((acc, row) => {
-    const campus = row.campus || 'Sin Campus';
-    acc[campus] = (acc[campus] || 0) + row.total_apoyos;
+    if (!row.origen_base || row.origen_base === 'Sin base campus') return acc;
+    if (!acc[row.origen_base]) acc[row.origen_base] = { total: 0, withSupport: 0 };
+    acc[row.origen_base].total += 1;
+    if (row.tiene_apoyo) acc[row.origen_base].withSupport += 1;
     return acc;
   }, {});
-  const campusEntries = Object.entries(campusTotals).sort((a, b) => b[1] - a[1]);
+
+  const campusEntries = Object.entries(campusTotals).sort((a, b) => b[1].withSupport - a[1].withSupport);
   charts.campus.data.labels = campusEntries.map(([label]) => label);
-  charts.campus.data.datasets[0].data = campusEntries.map(([, value]) => value);
+  charts.campus.data.datasets[0].data = campusEntries.map(([, value]) => value.withSupport);
 
   charts.supportType.data.datasets[0].data = [
     rows.reduce((acc, row) => acc + row.conteo_ciac, 0),
@@ -54,7 +58,7 @@ export function updateCharts(charts, rows) {
   charts.status.data.datasets[0].data = [withSupport, rows.length - withSupport];
 
   charts.quality.data.datasets[0].data = [
-    rows.filter((row) => row.sin_campus).length,
+    missingCampusRows.length,
     rows.filter((row) => row.issues_count > 0 || row.observacion_calidad).length,
   ];
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DATA-E · CRM Académico</title>
+  <title>Consolidado de apoyos DATA-E 2025</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link href="./assets/css/styles.css" rel="stylesheet" />
@@ -12,9 +12,9 @@
   <main class="container-fluid crm-app py-4 px-3 px-lg-4">
     <header class="crm-header mb-3">
       <div>
-        <span class="crm-badge">DATA-E</span>
-        <h1>CRM Académico de apoyos 2025</h1>
-        <p class="mb-0">Consolidación institucional por estudiante (listas base San Joaquín / Vitacura + fuentes complementarias).</p>
+        <span class="crm-badge">DATA-E 2025 · Consolidado oficial</span>
+        <h1>Consolidado de apoyos DATA-E 2025</h1>
+        <p class="mb-0">Visualización ejecutiva del consolidado oficial construido desde listas base por campus (San Joaquín y Vitacura), con columnas completadas por fuentes externas.</p>
       </div>
       <div class="text-lg-end">
         <small class="text-muted d-block">Última consolidación</small>
@@ -23,6 +23,16 @@
     </header>
 
     <section class="crm-card mb-3">
+      <h2>Resumen general</h2>
+      <section class="kpi-grid mb-2" id="kpiGrid"></section>
+      <div class="d-flex flex-wrap gap-2">
+        <span class="pill" id="recordsCounter">0 resultados filtrados en consolidado</span>
+        <span class="pill" id="missingCampusCounter">0 registros sin campus</span>
+      </div>
+    </section>
+
+    <section class="crm-card mb-3">
+      <h2>Consolidado por campus (filtrable)</h2>
       <div class="row g-3 align-items-end">
         <div class="col-12 col-lg-3">
           <label class="form-label" for="searchInput">Buscar nombre o RUT</label>
@@ -41,31 +51,21 @@
           <select id="supportStatusFilter" class="form-select"></select>
         </div>
         <div class="col-6 col-lg-2">
-          <label class="form-label" for="missingCampusFilter">RUT sin campus</label>
-          <select id="missingCampusFilter" class="form-select"></select>
-        </div>
-        <div class="col-12 col-lg-1">
           <label class="form-label" for="sourceFilter">Fuente</label>
           <select id="sourceFilter" class="form-select"></select>
         </div>
-      </div>
-      <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mt-3">
-        <div class="d-flex gap-2 flex-wrap">
-          <span class="pill" id="recordsCounter">0 resultados</span>
-          <span class="pill" id="missingCampusCounter">0 sin campus</span>
+        <div class="col-12 col-lg-1 d-grid">
+          <button id="clearFiltersBtn" class="btn btn-outline-secondary btn-sm">Limpiar</button>
         </div>
-        <button id="clearFiltersBtn" class="btn btn-outline-secondary btn-sm">Limpiar filtros</button>
       </div>
     </section>
-
-    <section class="kpi-grid mb-3" id="kpiGrid"></section>
 
     <section class="row g-3 mb-3">
       <div class="col-12 col-xl-8">
         <article class="crm-card h-100">
           <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-            <h2 class="mb-0">Consolidado principal por estudiante</h2>
-            <button id="exportCsvBtn" class="btn btn-sm btn-primary">Exportar CSV (filtro)</button>
+            <h2 class="mb-0">Consolidado oficial por estudiante (campus)</h2>
+            <button id="exportCsvBtn" class="btn btn-sm btn-primary">Exportar CSV filtrado</button>
           </div>
           <div id="crmTable"></div>
         </article>
@@ -79,20 +79,68 @@
     </section>
 
     <section class="row g-3 mb-3">
+      <div class="col-12 col-xl-6">
+        <article class="crm-card h-100">
+          <h2>Vista consolidada · San Joaquín</h2>
+          <div id="sjTable"></div>
+        </article>
+      </div>
+      <div class="col-12 col-xl-6">
+        <article class="crm-card h-100">
+          <h2>Vista consolidada · Vitacura</h2>
+          <div id="vitTable"></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="row g-3 mb-3">
       <div class="col-12">
         <article class="crm-card">
-          <h2>Vista separada: RUT sin campus</h2>
-          <p class="subtle mb-2">Registros detectados en fuentes complementarias sin asignación de campus en listas base.</p>
+          <h2>Registros sin campus identificado</h2>
+          <p class="subtle mb-2">RUT detectados en fuentes complementarias que no pudieron asociarse de forma confiable a San Joaquín o Vitacura. No se mezclan con el consolidado oficial por campus.</p>
           <div id="missingCampusTable"></div>
         </article>
       </div>
     </section>
 
-    <section class="row g-3">
-      <div class="col-12 col-lg-6 col-xxl-3"><article class="crm-card"><h2>Apoyos por campus</h2><canvas id="chartCampus"></canvas></article></div>
+    <section class="row g-3 mb-3">
+      <div class="col-12 col-lg-6 col-xxl-3"><article class="crm-card"><h2>Comparación por campus</h2><canvas id="chartCampus"></canvas></article></div>
       <div class="col-12 col-lg-6 col-xxl-3"><article class="crm-card"><h2>Distribución por tipo</h2><canvas id="chartSupportType"></canvas></article></div>
       <div class="col-12 col-lg-6 col-xxl-3"><article class="crm-card"><h2>Con apoyo vs sin apoyo</h2><canvas id="chartSupportStatus"></canvas></article></div>
-      <div class="col-12 col-lg-6 col-xxl-3"><article class="crm-card"><h2>Calidad y sin campus</h2><canvas id="chartQuality"></canvas></article></div>
+      <div class="col-12 col-lg-6 col-xxl-3"><article class="crm-card"><h2>Calidad y trazabilidad</h2><canvas id="chartQuality"></canvas></article></div>
+    </section>
+
+    <section class="row g-3 mb-3">
+      <div class="col-12 col-xl-7">
+        <article class="crm-card">
+          <h2>Metodología y trazabilidad</h2>
+          <ul class="method-list mb-0">
+            <li>Base oficial: <strong>SAN_JOAQUIN_APOYOS_2025_FINAL.csv</strong> y <strong>VITACURA_APOYOS_2025_FINAL.csv</strong>.</li>
+            <li>Fuentes externas completan columnas: Katherine (atenciones+talleres), Gleudys (atenciones+talleres+mentorías), Asistencia Proyecto Inicial S1/S2 (talleres), Registro CIAC (apoyo académico CIAC).</li>
+            <li>Microgrupo no se utiliza como indicador principal ni de consolidación.</li>
+            <li>Cuando hay conteo fiable se usa número de sesiones; si no, marca de participación (X/1) consolidada como presencia.</li>
+            <li>RUT de fuentes externas sin campus confiable se conservan en sección independiente de <em>RUT sin campus</em>.</li>
+            <li>El dashboard actúa como capa de visualización del consolidado oficial DATA-E 2025.</li>
+          </ul>
+        </article>
+      </div>
+      <div class="col-12 col-xl-5">
+        <article class="crm-card">
+          <h2>Controles de calidad de datos</h2>
+          <div id="qualityPanel"></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="crm-card">
+      <h2>Exportaciones oficiales</h2>
+      <p class="subtle">Descarga directa de archivos oficiales de consolidación y maestro.</p>
+      <div class="d-flex flex-wrap gap-2" id="exportsPanel">
+        <a class="btn btn-outline-primary btn-sm" href="./data/SAN_JOAQUIN_APOYOS_2025_consolidado.csv" download>San Joaquín consolidado (CSV)</a>
+        <a class="btn btn-outline-primary btn-sm" href="./data/VITACURA_APOYOS_2025_consolidado.csv" download>Vitacura consolidado (CSV)</a>
+        <a class="btn btn-outline-primary btn-sm" href="./data/RUT_SIN_CAMPUS.csv" download>RUT sin campus (CSV)</a>
+        <a class="btn btn-outline-primary btn-sm" href="./data/MAESTRO_APOYOS_DATA_E_2025.xlsx" download>Maestro apoyos DATA-E 2025 (Excel)</a>
+      </div>
     </section>
   </main>
 
