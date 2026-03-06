@@ -1,6 +1,0 @@
-__pycache__/
-*.pyc
-_artifacts/
-output/*.xlsx
-output/*.db
-./_artifacts/
