@@ -6,7 +6,10 @@ const COLUMNS = [
   { key: 'conteo_talleres', label: 'Talleres', type: 'number' },
   { key: 'conteo_mentorias', label: 'Mentoría', type: 'number' },
   { key: 'conteo_ciac', label: 'Apoyo CIAC', type: 'number' },
-  { key: 'total_apoyos', label: 'Total apoyos', type: 'number' },
+  { key: 'conteo_tutoria_par', label: 'Tutoría par', type: 'number' },
+  { key: 'total_sesiones', label: 'Total sesiones', type: 'number' },
+  { key: 'intensidad_apoyo', label: 'Intensidad', type: 'text' },
+  { key: 'matriz_participacion', label: 'Matriz participación', type: 'text' },
   { key: 'estado', label: 'Con apoyo', type: 'text' },
   { key: 'fuentes_detectadas', label: 'Origen registro', type: 'text' },
   { key: 'observacion_calidad', label: 'Notas consolidación', type: 'text' },
@@ -16,6 +19,21 @@ const escapeHtml = (value = '') => value.toString()
   .replaceAll('&', '&amp;')
   .replaceAll('<', '&lt;')
   .replaceAll('>', '&gt;');
+
+const supportBadgeMap = [
+  { key: 'conteo_talleres', flag: 'talleres', label: 'Talleres', short: 'T' },
+  { key: 'conteo_mentorias', flag: 'mentorias', label: 'Mentoría', short: 'M' },
+  { key: 'conteo_ciac', flag: 'ciac', label: 'CIAC', short: 'C' },
+  { key: 'conteo_atenciones', flag: 'atenciones', label: 'Atención individual', short: 'A' },
+  { key: 'conteo_tutoria_par', flag: 'tutoria_par', label: 'Tutoría par', short: 'TP' },
+];
+
+function renderParticipationBadges(row) {
+  return supportBadgeMap.map((item) => {
+    const active = Number(row[item.key] || 0) > 0 || Boolean(row[item.flag]);
+    return `<span class="matrix-badge ${active ? 'matrix-on' : 'matrix-off'}" title="${item.label}: ${active ? 'Participa' : 'Sin registro'}">${item.short}</span>`;
+  }).join('');
+}
 
 function sortRows(rows, key, direction, type) {
   const data = [...rows].sort((a, b) => {
@@ -28,7 +46,7 @@ function sortRows(rows, key, direction, type) {
 }
 
 function toCsv(rows) {
-  const headers = ['rut', 'nombre', 'campus', 'atencion_individual', 'talleres', 'tutoria_par', 'mentoria', 'apoyo_ciac', 'con_apoyo', 'origen_registro', 'observaciones'];
+  const headers = ['rut', 'nombre', 'campus', 'atencion_individual', 'talleres', 'tutoria_par', 'mentoria', 'apoyo_ciac', 'total_sesiones', 'intensidad', 'con_apoyo', 'origen_registro', 'observaciones'];
   const lines = [headers.join(',')];
   rows.forEach((row) => {
     const cells = [
@@ -37,9 +55,11 @@ function toCsv(rows) {
       row.campus,
       row.conteo_atenciones,
       row.conteo_talleres,
-      0,
+      row.conteo_tutoria_par || 0,
       row.conteo_mentorias,
       row.conteo_ciac,
+      row.total_sesiones,
+      row.intensidad_apoyo,
       row.tiene_apoyo ? 1 : 0,
       (row.fuentes_detectadas || []).join(' | '),
       row.observacion_calidad || '',
@@ -80,7 +100,7 @@ function buildSimpleTable(rows, emptyMessage = 'No hay registros para los filtro
 
 export function createMainTable(containerId, onRowSelected) {
   const container = document.getElementById(containerId);
-  const state = { rows: [], sortedRows: [], sortKey: 'total_apoyos', sortDirection: 'desc', page: 1, pageSize: 20 };
+  const state = { rows: [], sortedRows: [], sortKey: 'total_sesiones', sortDirection: 'desc', page: 1, pageSize: 20 };
 
   function render() {
     const column = COLUMNS.find((col) => col.key === state.sortKey) || COLUMNS[0];
@@ -101,13 +121,16 @@ export function createMainTable(containerId, onRowSelected) {
             <td class="numeric">${row.conteo_talleres}</td>
             <td class="numeric">${row.conteo_mentorias}</td>
             <td class="numeric">${row.conteo_ciac}</td>
-            <td class="numeric">${row.total_apoyos}</td>
+            <td class="numeric">${row.conteo_tutoria_par || 0}</td>
+            <td class="numeric">${row.total_sesiones}</td>
+            <td><span class="intensity-badge intensity-${escapeHtml((row.intensidad_apoyo || 'Sin apoyo').toLowerCase().replace(/\s+/g, '-'))}">${escapeHtml(row.intensidad_apoyo)}</span></td>
+            <td><div class="matrix-cell">${renderParticipationBadges(row)}</div></td>
             <td><span class="status-badge ${row.tiene_apoyo ? 'status-ok' : 'status-empty'}">${row.tiene_apoyo ? 'Sí' : 'No'}</span></td>
             <td title="${escapeHtml((row.fuentes_detectadas || []).join(', ') || '—')}">${escapeHtml((row.fuentes_detectadas || []).join(', ') || '—')}</td>
             <td title="${escapeHtml(row.observacion_calidad || '—')}">${escapeHtml(row.observacion_calidad || '—')}</td>
             <td><button class="btn btn-sm btn-outline-primary table-action" data-detail="${row.id}">Detalle</button></td>
           </tr>`).join('')
-      : '<tr><td colspan="12" class="text-center py-4 text-muted">No hay registros para los filtros seleccionados</td></tr>';
+      : '<tr><td colspan="16" class="text-center py-4 text-muted">No hay registros para los filtros seleccionados</td></tr>';
 
     container.innerHTML = `
       <div class="table-shell"><table class="crm-table"><thead><tr>${headers}<th>Acción</th></tr></thead><tbody>${body}</tbody></table></div>

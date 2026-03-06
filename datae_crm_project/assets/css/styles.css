@@ -692,3 +692,69 @@ canvas {
 #exportsPanel .btn:hover {
   background: #edf3ff;
 }
+
+.matrix-cell {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.matrix-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 22px;
+  font-size: 0.62rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-weight: 700;
+}
+
+.matrix-on {
+  background: #dbeafe;
+  color: #1d4ed8;
+  border-color: #93c5fd;
+}
+
+.matrix-off {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.intensity-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0.2rem 0.48rem;
+}
+
+.intensity-badge.intensity-bajo-apoyo {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.intensity-badge.intensity-medio-apoyo {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.intensity-badge.intensity-alto-apoyo {
+  background: #dbeafe;
+  color: #1e3a8a;
+}
+
+.intensity-badge.intensity-sin-apoyo {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.source-chip-grid {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.chart-wrap-sm {
+  height: 220px;
+}

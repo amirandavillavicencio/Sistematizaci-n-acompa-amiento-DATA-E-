@@ -4,18 +4,17 @@ export function fillSelect(select, options) {
   select.innerHTML = options.map((opt) => `<option value="${opt}">${opt}</option>`).join('');
 }
 
-export function renderKpis(container, summary) {
+export function renderKpis(container, rows) {
+  const totalEstudiantes = rows.length;
+  const totalParticipaciones = rows.reduce((acc, row) => acc + Number(row.total_sesiones || row.total_apoyos || 0), 0);
+  const estudiantesConApoyo = rows.filter((row) => row.tiene_apoyo).length;
+  const cobertura = totalEstudiantes ? (estudiantesConApoyo / totalEstudiantes) * 100 : 0;
+
   const cards = [
-    { label: 'Estudiantes en bases oficiales', value: formatNumber(summary.total_estudiantes_unicos), icon: '👥', priority: 'primary' },
-    { label: 'Estudiantes con apoyo consolidado', value: formatNumber(summary.total_con_apoyo), icon: '✅', priority: 'primary' },
-    { label: '% cobertura de apoyos en bases', value: `${Number(summary.porcentaje_estudiantes_con_apoyo || 0).toFixed(1)}%`, icon: '📈', priority: 'primary' },
-    { label: 'RUT detectados en conjunto separado sin campus', value: formatNumber(summary.total_rut_sin_campus), icon: '⚠️', priority: 'primary' },
-    { label: 'Total estudiantes base San Joaquín', value: formatNumber(summary.base_san_joaquin), icon: '🏫', priority: 'secondary' },
-    { label: 'Total estudiantes base Vitacura', value: formatNumber(summary.base_vitacura), icon: '🏫', priority: 'secondary' },
-    { label: 'Total participaciones CIAC', value: formatNumber(summary.total_participaciones_ciac), icon: '📚', priority: 'secondary' },
-    { label: 'Total participaciones en talleres', value: formatNumber(summary.total_participaciones_talleres), icon: '🧩', priority: 'secondary' },
-    { label: 'Total participaciones en mentorías', value: formatNumber(summary.total_participaciones_mentorias), icon: '🤝', priority: 'secondary' },
-    { label: 'Total participaciones en atenciones individuales', value: formatNumber(summary.total_participaciones_atenciones), icon: '🗂️', priority: 'secondary' },
+    { label: 'Total estudiantes únicos en consolidado', value: formatNumber(totalEstudiantes), icon: '👥', priority: 'primary' },
+    { label: 'Total participaciones en apoyos', value: formatNumber(totalParticipaciones), icon: '📊', priority: 'primary' },
+    { label: 'Estudiantes con al menos un apoyo', value: formatNumber(estudiantesConApoyo), icon: '✅', priority: 'primary' },
+    { label: 'Porcentaje de cobertura', value: `${cobertura.toFixed(1)}%`, icon: '📈', priority: 'primary' },
   ];
 
   container.innerHTML = cards.map(({ label, value, icon, priority }) => `
@@ -45,6 +44,7 @@ export function renderDetail(container, record) {
         <span class="detail-tag">Pertenece a base oficial por campus: ${record.presencia_lista_base ? 'Sí' : 'No'}</span>
         <span class="detail-tag">Origen: ${record.origen_base}</span>
         <span class="detail-tag">Con apoyo: ${record.tiene_apoyo ? 'Sí' : 'No'}</span>
+        <span class="detail-tag">Intensidad: ${record.intensidad_apoyo}</span>
       </div>
     </div>
     <div class="detail-stats">
@@ -52,8 +52,8 @@ export function renderDetail(container, record) {
       <div class="stat-item"><span>Talleres</span><strong>${record.conteo_talleres}</strong></div>
       <div class="stat-item"><span>Mentorías</span><strong>${record.conteo_mentorias}</strong></div>
       <div class="stat-item"><span>Atenciones</span><strong>${record.conteo_atenciones}</strong></div>
-      <div class="stat-item"><span>Total apoyos</span><strong>${record.total_apoyos}</strong></div>
-      <div class="stat-item"><span>Estado</span><strong>${record.tiene_apoyo ? 'Con apoyo' : 'Sin apoyo'}</strong></div>
+      <div class="stat-item"><span>Tutoría par</span><strong>${record.conteo_tutoria_par || 0}</strong></div>
+      <div class="stat-item"><span>Total sesiones</span><strong>${record.total_sesiones}</strong></div>
     </div>
     <div class="detail-group">
       <p class="detail-group-label">Fuentes utilizadas para completar columnas</p>
@@ -66,20 +66,40 @@ export function renderDetail(container, record) {
   `;
 }
 
-export function renderQualityChecks(container, campusRows, missingCampusRows, qualitySummary = {}) {
-  const ruts = campusRows.map((row) => row.rut);
-  const duplicatedRuts = ruts.length - new Set(ruts).size;
+export function renderQualityChecks(container, campusRows, missingCampusRows, qualitySummary = {}, qualityStats = {}) {
   const nombresFaltantes = campusRows.filter((row) => !row.nombre || row.nombre === 'Sin nombre').length;
-  const inconsistenciasConteo = campusRows.filter((row) => row.total_apoyos < 0).length;
 
   container.innerHTML = `
     <div class="quality-list">
-      <div class="quality-item"><span>RUT duplicados en base consolidada</span><strong>${formatNumber(duplicatedRuts)}</strong></div>
+      <div class="quality-item"><span>RUT duplicados en base consolidada</span><strong>${formatNumber(qualityStats.duplicatedRuts)}</strong></div>
       <div class="quality-item"><span>RUT en externos sin campus identificado</span><strong>${formatNumber(missingCampusRows.length)}</strong></div>
       <div class="quality-item"><span>Registros con nombre faltante</span><strong>${formatNumber(nombresFaltantes)}</strong></div>
-      <div class="quality-item"><span>Posibles inconsistencias de conteo</span><strong>${formatNumber(inconsistenciasConteo)}</strong></div>
+      <div class="quality-item"><span>Registros con estado/conteo inconsistente</span><strong>${formatNumber(qualityStats.inconsistentRecords)}</strong></div>
+      <div class="quality-item"><span>Mezcla de conteos y marcas de participación</span><strong>${formatNumber(qualityStats.mixedCountMarkRecords)}</strong></div>
       <div class="quality-item"><span>RUT con issues de calidad reportados</span><strong>${formatNumber(qualitySummary.total_rut_con_issues)}</strong></div>
       <div class="quality-note">Nota metodológica oficial: los conteos corresponden a participaciones con respaldo de sesiones. Cuando no existe conteo robusto, se utiliza marca de participación (X/1) como evidencia de presencia.</div>
+    </div>
+  `;
+}
+
+export function renderMissingCampusAnalysis(container, rows) {
+  const sourceTotals = rows.reduce((acc, row) => {
+    const sources = row.fuentes_detectadas?.length ? row.fuentes_detectadas : ['Sin fuente'];
+    sources.forEach((source) => {
+      acc[source] = (acc[source] || 0) + 1;
+    });
+    return acc;
+  }, {});
+
+  const items = Object.entries(sourceTotals).sort((a, b) => b[1] - a[1]);
+  if (!items.length) {
+    container.innerHTML = '<p class="subtle mb-0">No hay registros sin campus para analizar por fuente.</p>';
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="source-chip-grid">
+      ${items.map(([source, count]) => `<span class="pill">${source}: <strong>${formatNumber(count)}</strong></span>`).join('')}
     </div>
   `;
 }
