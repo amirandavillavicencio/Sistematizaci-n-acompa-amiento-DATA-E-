@@ -16,7 +16,7 @@ export function createCharts() {
   return {
     byCampus: buildChart(document.getElementById('chartCampus'), {
       type: 'bar',
-      data: { labels: [], datasets: [{ label: 'Total apoyos', data: [], backgroundColor: '#2563eb' }] },
+      data: { labels: [], datasets: [{ label: 'Estudiantes', data: [], backgroundColor: '#2563eb' }] },
       options: { scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } },
     }),
     byType: buildChart(document.getElementById('chartSupportType'), {
@@ -53,13 +53,15 @@ export function createCharts() {
 }
 
 export function updateCharts(charts, rows) {
-  const campusMap = rows.reduce((acc, r) => {
-    acc[r.campus] = (acc[r.campus] || 0) + r.total_apoyos;
+  const campusMap = rows.reduce((acc, row) => {
+    const campus = row.campus || 'Sin Campus';
+    acc[campus] = (acc[campus] || 0) + 1;
     return acc;
   }, {});
 
-  charts.byCampus.data.labels = Object.keys(campusMap);
-  charts.byCampus.data.datasets[0].data = Object.values(campusMap);
+  const orderedCampuses = Object.entries(campusMap).sort((a, b) => b[1] - a[1]);
+  charts.byCampus.data.labels = orderedCampuses.map(([name]) => name);
+  charts.byCampus.data.datasets[0].data = orderedCampuses.map(([, value]) => value);
 
   charts.byType.data.datasets[0].data = [
     rows.reduce((sum, r) => sum + r.ciac, 0),
@@ -71,8 +73,8 @@ export function updateCharts(charts, rows) {
   const withSupport = rows.filter((r) => r.total_apoyos > 0).length;
   charts.supportStatus.data.datasets[0].data = [withSupport, rows.length - withSupport];
 
-  const missingCampus = rows.filter((r) => !r.tiene_campus).length;
-  charts.missingCampus.data.datasets[0].data = [rows.length - missingCampus, missingCampus];
+  const missingCampusCount = rows.filter((r) => !r.tiene_campus).length;
+  charts.missingCampus.data.datasets[0].data = [rows.length - missingCampusCount, missingCampusCount];
 
   const intensityBins = [0, 0, 0, 0];
   rows.forEach((r) => {
