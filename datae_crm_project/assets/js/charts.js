@@ -5,7 +5,14 @@ function buildChart(id, config) {
       responsive: true,
       maintainAspectRatio: false,
       animation: false,
-      plugins: { legend: { position: 'bottom' }, tooltip: { enabled: true } },
+      events: ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'],
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { boxWidth: 10, boxHeight: 10, color: '#475569', font: { size: 11, weight: 600 } },
+        },
+        tooltip: { enabled: true },
+      },
       ...config.options,
     },
   });
@@ -15,21 +22,21 @@ export function createCharts() {
   return {
     campus: buildChart('chartCampus', {
       type: 'bar',
-      data: { labels: [], datasets: [{ label: 'Estudiantes con apoyo', data: [], backgroundColor: ['#1d4ed8', '#2563eb'] }] },
-      options: { scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } },
+      data: { labels: [], datasets: [{ label: 'Estudiantes con apoyo', data: [], backgroundColor: ['#1e40af', '#3b82f6'], borderRadius: 6 }] },
+      options: { scales: { y: { beginAtZero: true, grid: { color: '#e2e8f0' } }, x: { grid: { display: false } } }, plugins: { legend: { display: false } } },
     }),
     supportType: buildChart('chartSupportType', {
       type: 'doughnut',
-      data: { labels: ['CIAC', 'Talleres', 'Mentorías', 'Atenciones'], datasets: [{ data: [0, 0, 0, 0], backgroundColor: ['#1d4ed8', '#3b82f6', '#0ea5e9', '#93c5fd'] }] },
+      data: { labels: ['CIAC', 'Talleres', 'Mentorías', 'Atenciones'], datasets: [{ data: [0, 0, 0, 0], backgroundColor: ['#1e40af', '#2563eb', '#0ea5e9', '#93c5fd'], borderWidth: 0 }] },
     }),
     status: buildChart('chartSupportStatus', {
       type: 'pie',
-      data: { labels: ['Con apoyo', 'Sin apoyo'], datasets: [{ data: [0, 0], backgroundColor: ['#0f766e', '#cbd5e1'] }] },
+      data: { labels: ['Con apoyo', 'Sin apoyo'], datasets: [{ data: [0, 0], backgroundColor: ['#16a34a', '#cbd5e1'], borderWidth: 0 }] },
     }),
     quality: buildChart('chartQuality', {
       type: 'bar',
-      data: { labels: ['RUT sin campus', 'Con observaciones calidad'], datasets: [{ data: [0, 0], backgroundColor: ['#f59e0b', '#ef4444'] }] },
-      options: { scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } },
+      data: { labels: ['RUT sin campus', 'Con observaciones calidad'], datasets: [{ data: [0, 0], backgroundColor: ['#f59e0b', '#ef4444'], borderRadius: 6 }] },
+      options: { scales: { y: { beginAtZero: true, grid: { color: '#e2e8f0' } }, x: { grid: { display: false } } }, plugins: { legend: { display: false } } },
     }),
   };
 }
