@@ -66,10 +66,10 @@ function buildSimpleTable(rows, emptyMessage = 'Sin registros para los filtros a
   const body = rows.slice(0, 200).map((row) => `
     <tr>
       <td>${escapeHtml(row.rut)}</td>
-      <td>${escapeHtml(row.nombre)}</td>
+      <td title="${escapeHtml(row.nombre)}">${escapeHtml(row.nombre)}</td>
       <td class="numeric">${row.total_apoyos}</td>
-      <td>${escapeHtml((row.fuentes_detectadas || []).join(', ') || '—')}</td>
-      <td>${escapeHtml(row.observacion_calidad || '—')}</td>
+      <td title="${escapeHtml((row.fuentes_detectadas || []).join(', ') || '—')}">${escapeHtml((row.fuentes_detectadas || []).join(', ') || '—')}</td>
+      <td title="${escapeHtml(row.observacion_calidad || '—')}">${escapeHtml(row.observacion_calidad || '—')}</td>
     </tr>
   `).join('');
 
@@ -95,7 +95,7 @@ export function createMainTable(containerId, onRowSelected) {
     const body = currentRows.length
       ? currentRows.map((row) => `<tr>
             <td>${escapeHtml(row.rut)}</td>
-            <td>${escapeHtml(row.nombre)}</td>
+            <td title="${escapeHtml(row.nombre)}">${escapeHtml(row.nombre)}</td>
             <td>${escapeHtml(row.campus)}</td>
             <td class="numeric">${row.conteo_atenciones}</td>
             <td class="numeric">${row.conteo_talleres}</td>
@@ -103,9 +103,9 @@ export function createMainTable(containerId, onRowSelected) {
             <td class="numeric">${row.conteo_ciac}</td>
             <td class="numeric">${row.total_apoyos}</td>
             <td><span class="status-badge ${row.tiene_apoyo ? 'status-ok' : 'status-empty'}">${row.tiene_apoyo ? 'Sí' : 'No'}</span></td>
-            <td>${escapeHtml((row.fuentes_detectadas || []).join(', ') || '—')}</td>
-            <td>${escapeHtml(row.observacion_calidad || '—')}</td>
-            <td><button class="btn btn-sm btn-outline-primary" data-detail="${row.id}">Detalle</button></td>
+            <td title="${escapeHtml((row.fuentes_detectadas || []).join(', ') || '—')}">${escapeHtml((row.fuentes_detectadas || []).join(', ') || '—')}</td>
+            <td title="${escapeHtml(row.observacion_calidad || '—')}">${escapeHtml(row.observacion_calidad || '—')}</td>
+            <td><button class="btn btn-sm btn-outline-primary table-action" data-detail="${row.id}">Detalle</button></td>
           </tr>`).join('')
       : '<tr><td colspan="12" class="text-center py-4 text-muted">Sin resultados para los filtros actuales.</td></tr>';
 
