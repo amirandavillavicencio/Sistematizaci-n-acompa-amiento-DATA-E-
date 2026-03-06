@@ -1,5 +1,5 @@
 import { loadConsolidatedData } from './data-loader.js';
-import { applyFilters, createFilterState, hydrateFilterOptions, resetFilterState } from './filters.js';
+import { applyFilters, createFilterState, hydrateFilterOptions, normalizeText, resetFilterState } from './filters.js';
 import { createMainTable, createCompactCampusTable, renderMissingCampusTable } from './table.js';
 import { createCharts, updateCharts } from './charts.js';
 import { fillSelect, renderDetail, renderKpis, renderQualityChecks, updateCounters } from './ui.js';
@@ -28,8 +28,8 @@ function runUpdate(elements) {
   const campusRows = state.filters.search || state.filters.supportType !== 'Todos' || state.filters.supportStatus !== 'Todos' || state.filters.source !== 'Todas'
     ? state.filtered
     : state.records;
-  sjTable.setRows(campusRows.filter((row) => row.origen_base === 'San Joaquín'));
-  vitTable.setRows(campusRows.filter((row) => row.origen_base === 'Vitacura'));
+  sjTable.setRows(campusRows.filter((row) => normalizeText(row.origen_base || row.campus) === normalizeText('San Joaquín')));
+  vitTable.setRows(campusRows.filter((row) => normalizeText(row.origen_base || row.campus) === normalizeText('Vitacura')));
 
   renderMissingCampusTable('missingCampusTable', state.missingCampusRecords);
   updateCharts(charts, state.filtered, state.missingCampusRecords);

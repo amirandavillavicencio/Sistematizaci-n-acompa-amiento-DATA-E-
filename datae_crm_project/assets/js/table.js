@@ -61,7 +61,7 @@ function download(content, filename) {
   URL.revokeObjectURL(url);
 }
 
-function buildSimpleTable(rows, emptyMessage = 'Sin registros para los filtros actuales.') {
+function buildSimpleTable(rows, emptyMessage = 'No hay registros para los filtros seleccionados') {
   if (!rows.length) return `<div class="empty-state"><div><strong>Sin registros disponibles</strong><p class="mb-0">${emptyMessage}</p></div></div>`;
   const body = rows.slice(0, 200).map((row) => `
     <tr>
@@ -107,7 +107,7 @@ export function createMainTable(containerId, onRowSelected) {
             <td title="${escapeHtml(row.observacion_calidad || '—')}">${escapeHtml(row.observacion_calidad || '—')}</td>
             <td><button class="btn btn-sm btn-outline-primary table-action" data-detail="${row.id}">Detalle</button></td>
           </tr>`).join('')
-      : '<tr><td colspan="12" class="text-center py-4 text-muted">No hay resultados para los filtros aplicados.</td></tr>';
+      : '<tr><td colspan="12" class="text-center py-4 text-muted">No hay registros para los filtros seleccionados</td></tr>';
 
     container.innerHTML = `
       <div class="table-shell"><table class="crm-table"><thead><tr>${headers}<th>Acción</th></tr></thead><tbody>${body}</tbody></table></div>
