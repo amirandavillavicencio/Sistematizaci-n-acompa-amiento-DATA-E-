@@ -19,8 +19,8 @@ Aplicación web estática para visualizar el **consolidado oficial DATA-E 2025**
 ## Archivos principales
 
 - `data/apoyos_consolidados.json`: payload de visualización (records, summary, quality_summary, rut_sin_campus).
-- `data/SAN_JOAQUIN_APOYOS_2025_consolidado.csv`: consolidado oficial campus San Joaquín.
-- `data/VITACURA_APOYOS_2025_consolidado.csv`: consolidado oficial campus Vitacura.
+- `data/SAN_JOAQUIN_APOYOS_2025_CONSOLIDADO.csv`: consolidado oficial campus San Joaquín.
+- `data/VITACURA_APOYOS_2025_CONSOLIDADO.csv`: consolidado oficial campus Vitacura.
 - `data/RUT_SIN_CAMPUS.csv`: registros externos sin campus identificado.
 - `data/MAESTRO_APOYOS_DATA_E_2025.xlsx`: maestro oficial.
 
@@ -55,8 +55,8 @@ Abrir: `http://localhost:8000`
 1. Abrir la app local o en Vercel.
 2. En bloque **Exportaciones oficiales**, usar cada botón de descarga.
 3. Validar que se descargan:
-   - `SAN_JOAQUIN_APOYOS_2025_consolidado.csv`
-   - `VITACURA_APOYOS_2025_consolidado.csv`
+   - `SAN_JOAQUIN_APOYOS_2025_CONSOLIDADO.csv`
+   - `VITACURA_APOYOS_2025_CONSOLIDADO.csv`
    - `RUT_SIN_CAMPUS.csv`
    - `MAESTRO_APOYOS_DATA_E_2025.xlsx`
 4. Botón **Exportar CSV filtrado** descarga el consolidado visible según filtros actuales.
