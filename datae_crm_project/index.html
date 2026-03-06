@@ -14,7 +14,7 @@
       <div class="header-main">
         <span class="crm-badge">DATA-E 2025 · Consolidado institucional oficial</span>
         <h1>Consolidado oficial de apoyos DATA-E 2025</h1>
-        <p class="mb-0">Tablero ejecutivo para seguimiento institucional del consolidado oficial por campus (San Joaquín y Vitacura), con trazabilidad metodológica y salida formal de exportaciones.</p>
+        <p class="mb-0">Informe ejecutivo institucional construido sobre las listas base oficiales de San Joaquín y Vitacura, complementado con fuentes externas para completar columnas, con metodología explícita y exportaciones formales de cierre.</p>
       </div>
       <aside class="header-meta-card text-lg-end">
         <small class="text-muted d-block">Fecha de actualización del consolidado oficial</small>
@@ -24,7 +24,7 @@
 
     <section class="dashboard-section">
       <div class="section-heading">
-        <h2>Resumen general del consolidado</h2>
+        <h2>1. Resumen general</h2>
       </div>
       <article class="crm-card">
         <p class="subtle mb-3">Lectura ejecutiva del consolidado institucional DATA-E 2025 construido sobre las listas base oficiales por campus.</p>
@@ -38,7 +38,7 @@
 
     <section class="dashboard-section">
       <div class="section-heading">
-        <h2>Filtros de consulta del consolidado por campus</h2>
+        <h2>Consulta del consolidado por campus</h2>
       </div>
       <article class="crm-card filters-card">
         <div class="row g-3 align-items-end">
@@ -71,11 +71,11 @@
 
     <section class="dashboard-section">
       <div class="section-heading">
-        <h2>Consolidado por campus</h2>
+        <h2>2. Consolidado por campus</h2>
       </div>
       <article class="crm-card narrative-card">
-        <p class="mb-2"><strong>Bases oficiales de trabajo:</strong> San Joaquín y Vitacura.</p>
-        <p class="mb-0 subtle">Los registros presentados en esta sección corresponden exclusivamente al proceso de consolidación sobre esas bases. Las fuentes externas completan columnas y trazabilidad, pero no incorporan estudiantes nuevos dentro del consolidado oficial por campus.</p>
+        <p class="mb-2"><strong>Bases oficiales del consolidado DATA-E 2025:</strong> San Joaquín y Vitacura.</p>
+        <p class="mb-0 subtle">Toda lectura de esta sección corresponde a la consolidación ejecutada sobre esas nóminas base. Las fuentes externas solo completan columnas de apoyo y trazabilidad de estudiantes ya presentes en dichas bases.</p>
       </article>
       <div class="row g-4 align-items-stretch">
         <div class="col-12 col-xxl-8">
@@ -98,7 +98,7 @@
 
     <section class="dashboard-section">
       <div class="section-heading">
-        <h2>Consolidado comparativo por campus base</h2>
+        <h2>Consolidado comparativo sobre bases oficiales</h2>
       </div>
       <div class="row g-4">
         <div class="col-12 col-xl-6">
@@ -118,17 +118,59 @@
 
     <section class="dashboard-section">
       <div class="section-heading">
-        <h2>Registros RUT sin campus</h2>
+        <h2>3. Registros RUT sin campus</h2>
       </div>
       <article class="crm-card isolated-section-card">
-        <p class="subtle mb-3"><strong>Conjunto separado del consolidado oficial.</strong> Corresponde a RUT detectados en fuentes complementarias que no pudieron asociarse de forma confiable a San Joaquín o Vitacura; por diseño metodológico se reportan fuera de las bases oficiales por campus.</p>
+        <p class="subtle mb-3"><strong>Conjunto separado del consolidado oficial por campus.</strong> Incluye RUT identificados en fuentes complementarias sin asignación confiable a San Joaquín o Vitacura. Estos registros se informan aparte y no modifican las bases oficiales por campus.</p>
         <div id="missingCampusTable"></div>
       </article>
     </section>
 
     <section class="dashboard-section">
       <div class="section-heading">
-        <h2>Visualizaciones ejecutivas</h2>
+        <h2>4. Metodología de consolidación</h2>
+      </div>
+      <div class="row g-4">
+        <div class="col-12 col-xl-7">
+          <article class="crm-card method-card">
+            <h3>Criterios metodológicos oficiales de integración</h3>
+            <ul class="method-list mb-0">
+              <li><strong>Listas base por campus:</strong> SAN_JOAQUIN_APOYOS_2025_FINAL.csv y VITACURA_APOYOS_2025_FINAL.csv constituyen la nómina oficial de estudiantes del consolidado DATA-E 2025.</li>
+              <li><strong>Fuentes externas para completar columnas:</strong> Katherine (atenciones y talleres), Gleudys (atenciones, talleres y mentorías), Asistencia Proyecto Inicial S1/S2 (talleres) y Registro CIAC (apoyo académico CIAC).</li>
+              <li><strong>Microgrupo:</strong> no fue considerado como indicador principal ni criterio de consolidación.</li>
+              <li><strong>Regla de integración de externos:</strong> las fuentes externas solo complementan variables de estudiantes existentes en las bases por campus y no crean estudiantes nuevos dentro del consolidado oficial.</li>
+              <li><strong>RUT sin campus:</strong> cuando no existe asignación de campus confiable, el registro queda en la sección separada de RUT sin campus.</li>
+              <li><strong>Lectura de valores:</strong> cuando existe respaldo de sesiones se informa conteo de participaciones; si no hay conteo robusto, se utiliza marca de participación (X/1) como evidencia de presencia.</li>
+            </ul>
+          </article>
+        </div>
+        <div class="col-12 col-xl-5">
+          <article class="crm-card">
+            <h3>Controles de calidad de datos</h3>
+            <div id="qualityPanel"></div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="dashboard-section">
+      <div class="section-heading">
+        <h2>5. Exportaciones oficiales</h2>
+      </div>
+      <article class="crm-card exports-card">
+        <p class="subtle">Salida oficial del sistema para reporte institucional, trazabilidad y cierre ejecutivo del consolidado DATA-E 2025.</p>
+        <div class="d-flex flex-wrap gap-2" id="exportsPanel">
+          <a class="btn btn-outline-primary btn-sm" href="./data/SAN_JOAQUIN_APOYOS_2025_consolidado.csv" download>CSV oficial · San Joaquín</a>
+          <a class="btn btn-outline-primary btn-sm" href="./data/VITACURA_APOYOS_2025_consolidado.csv" download>CSV oficial · Vitacura</a>
+          <a class="btn btn-outline-primary btn-sm" href="./data/RUT_SIN_CAMPUS.csv" download>CSV oficial · RUT sin campus</a>
+          <a class="btn btn-outline-primary btn-sm" href="./data/MAESTRO_APOYOS_DATA_E_2025.xlsx" download>Excel maestro oficial DATA-E 2025</a>
+        </div>
+      </article>
+    </section>
+
+    <section class="dashboard-section supporting-section">
+      <div class="section-heading">
+        <h2>Anexos visuales de seguimiento</h2>
       </div>
       <div class="row g-4">
         <div class="col-12 col-lg-6 col-xxl-3">
@@ -144,48 +186,6 @@
           <article class="crm-card chart-card"><h3>Calidad y trazabilidad</h3><div class="chart-wrap"><canvas id="chartQuality"></canvas></div></article>
         </div>
       </div>
-    </section>
-
-    <section class="dashboard-section">
-      <div class="section-heading">
-        <h2>Metodología de consolidación</h2>
-      </div>
-      <div class="row g-4">
-        <div class="col-12 col-xl-7">
-          <article class="crm-card method-card">
-            <h3>Criterios metodológicos oficiales</h3>
-            <ul class="method-list mb-0">
-              <li><strong>Listas base por campus:</strong> SAN_JOAQUIN_APOYOS_2025_FINAL.csv y VITACURA_APOYOS_2025_FINAL.csv son la base oficial del consolidado.</li>
-              <li><strong>Fuentes externas que completan columnas:</strong> Katherine (atenciones y talleres), Gleudys (atenciones, talleres y mentorías), Asistencia Proyecto Inicial S1/S2 (talleres) y Registro CIAC (apoyo académico CIAC).</li>
-              <li><strong>Microgrupo:</strong> no fue considerado como indicador principal ni criterio de consolidación.</li>
-              <li><strong>Regla de integración:</strong> fuentes externas complementan variables de estudiantes existentes en bases por campus; no crean estudiantes nuevos dentro del consolidado oficial por campus.</li>
-              <li><strong>RUT sin campus:</strong> cuando no existe asignación confiable de campus, el registro queda en la sección separada de RUT sin campus.</li>
-              <li><strong>Lectura de valores:</strong> cuando existe conteo robusto se informa número de participaciones; cuando no existe conteo, se utiliza marca de participación (X/1) consolidada como presencia.</li>
-            </ul>
-          </article>
-        </div>
-        <div class="col-12 col-xl-5">
-          <article class="crm-card">
-            <h3>Controles de calidad de datos</h3>
-            <div id="qualityPanel"></div>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <section class="dashboard-section">
-      <div class="section-heading">
-        <h2>Exportaciones oficiales</h2>
-      </div>
-      <article class="crm-card exports-card">
-        <p class="subtle">Salida formal del sistema para reporte institucional y trazabilidad de consolidación.</p>
-        <div class="d-flex flex-wrap gap-2" id="exportsPanel">
-          <a class="btn btn-outline-primary btn-sm" href="./data/SAN_JOAQUIN_APOYOS_2025_consolidado.csv" download>CSV oficial · San Joaquín</a>
-          <a class="btn btn-outline-primary btn-sm" href="./data/VITACURA_APOYOS_2025_consolidado.csv" download>CSV oficial · Vitacura</a>
-          <a class="btn btn-outline-primary btn-sm" href="./data/RUT_SIN_CAMPUS.csv" download>CSV oficial · RUT sin campus</a>
-          <a class="btn btn-outline-primary btn-sm" href="./data/MAESTRO_APOYOS_DATA_E_2025.xlsx" download>Excel maestro oficial DATA-E 2025</a>
-        </div>
-      </article>
     </section>
   </main>
 
