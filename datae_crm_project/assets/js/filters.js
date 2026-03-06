@@ -6,12 +6,21 @@ const defaultState = {
   quality: 'Todos',
 };
 
+function normalizeText(value = '') {
+  return value.toString().trim().toLowerCase();
+}
+
+function normalizeRut(value = '') {
+  return value.toString().replace(/\./g, '').trim().toLowerCase();
+}
+
 export function createFilterState() {
   return { ...defaultState };
 }
 
 export function hydrateFilterOptions(records) {
-  const campuses = ['Todos', ...new Set(records.map((r) => r.campus))].sort();
+  const uniqueCampuses = [...new Set(records.map((r) => r.campus))].sort((a, b) => a.localeCompare(b));
+  const campuses = ['Todos', ...uniqueCampuses];
   const supportTypes = ['Todos', 'CIAC', 'Talleres', 'Mentorías', 'Atenciones', 'Sin apoyos'];
   const supportStatus = ['Todos', 'Con apoyo', 'Sin apoyo'];
   const quality = ['Todos', 'Con observaciones', 'Sin observaciones', 'Sin campus'];
@@ -20,13 +29,14 @@ export function hydrateFilterOptions(records) {
 }
 
 export function applyFilters(records, filters) {
-  const search = filters.search.trim().toLowerCase();
+  const rawSearch = normalizeText(filters.search);
+  const searchRut = normalizeRut(rawSearch);
 
   return records.filter((r) => {
     const matchesSearch =
-      !search ||
-      r.nombre.toLowerCase().includes(search) ||
-      r.rut.toLowerCase().includes(search);
+      !rawSearch ||
+      normalizeText(r.nombre).includes(rawSearch) ||
+      normalizeRut(r.rut).includes(searchRut);
 
     const matchesCampus = filters.campus === 'Todos' || r.campus === filters.campus;
 

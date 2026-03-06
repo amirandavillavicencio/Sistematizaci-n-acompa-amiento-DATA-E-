@@ -58,7 +58,7 @@ function runUpdate(elements) {
   updateMainTable(table, state.filteredRecords);
   updateCharts(charts, state.filteredRecords);
 
-  if (!state.selectedRecord || !state.filteredRecords.find((r) => r.id === state.selectedRecord.id)) {
+  if (!state.selectedRecord || !state.filteredRecords.find((record) => record.id === state.selectedRecord.id)) {
     state.selectedRecord = null;
     renderDetail(elements.detailPanel, null);
   }
@@ -82,7 +82,6 @@ async function init() {
 
   const data = await loadConsolidatedData();
   state.allRecords = data.records;
-
   elements.generatedAt.textContent = data.generatedAt || 'Sin metadato';
 
   const options = hydrateFilterOptions(state.allRecords);
@@ -99,7 +98,7 @@ async function init() {
   charts = createCharts();
 
   elements.exportCsvBtn.addEventListener('click', () => {
-    table.download('csv', 'datae_crm_filtrado.csv');
+    table.download('csv', 'crm_academico_filtrado.csv');
   });
 
   bindFilterEvents(elements, () => runUpdate(elements));
