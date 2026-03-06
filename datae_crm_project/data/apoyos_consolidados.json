@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generated_at": "2026-03-06T11:37:15",
+    "generated_at": "2026-03-06T12:09:56",
     "source_files": [
       "SAN_JOAQUIN_APOYOS_2025_FINAL.csv",
       "VITACURA_APOYOS_2025_FINAL.csv",
@@ -10,7 +10,7 @@
       "DATEapoyosFInal.xlsx"
     ],
     "record_count": 1916,
-    "note": "Consolidación por RUT usando CSV campus + reporte de calidad."
+    "note": "Consolidación por RUT desde CSV de campus y reporte de calidad."
   },
   "quality_summary": {
     "total_issues": 302,

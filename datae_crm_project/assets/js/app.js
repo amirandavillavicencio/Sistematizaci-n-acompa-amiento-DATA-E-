@@ -1,6 +1,6 @@
 import { loadConsolidatedData } from './data-loader.js';
 import { applyFilters, createFilterState, hydrateFilterOptions, resetFilterState } from './filters.js';
-import { createMainTable, updateMainTable } from './table.js';
+import { createMainTable } from './table.js';
 import { createCharts, updateCharts } from './charts.js';
 import { fillSelect, renderDetail, renderKpis, updateCounters } from './ui.js';
 
@@ -14,30 +14,47 @@ const state = {
 let table;
 let charts;
 
-function bindFilterEvents(elements, runUpdate) {
+function runUpdate(elements) {
+  state.filteredRecords = applyFilters(state.allRecords, state.filters);
+  renderKpis(elements.kpiGrid, state.filteredRecords);
+  updateCounters(elements.recordsCounter, elements.missingCampusCounter, state.filteredRecords);
+  table.setRows(state.filteredRecords);
+  updateCharts(charts, state.filteredRecords);
+
+  const stillVisible = state.selectedRecord
+    ? state.filteredRecords.find((row) => row.id === state.selectedRecord.id)
+    : null;
+
+  if (!stillVisible) {
+    state.selectedRecord = null;
+    renderDetail(elements.detailPanel, null);
+  }
+}
+
+function bindFilterEvents(elements) {
   elements.searchInput.addEventListener('input', (event) => {
     state.filters.search = event.target.value;
-    runUpdate();
+    runUpdate(elements);
   });
 
   elements.campusFilter.addEventListener('change', (event) => {
     state.filters.campus = event.target.value;
-    runUpdate();
+    runUpdate(elements);
   });
 
   elements.supportTypeFilter.addEventListener('change', (event) => {
     state.filters.supportType = event.target.value;
-    runUpdate();
+    runUpdate(elements);
   });
 
   elements.supportStatusFilter.addEventListener('change', (event) => {
     state.filters.supportStatus = event.target.value;
-    runUpdate();
+    runUpdate(elements);
   });
 
-  elements.qualityFilter.addEventListener('change', (event) => {
-    state.filters.quality = event.target.value;
-    runUpdate();
+  elements.missingCampusFilter.addEventListener('change', (event) => {
+    state.filters.missingCampus = event.target.value;
+    runUpdate(elements);
   });
 
   elements.clearFiltersBtn.addEventListener('click', () => {
@@ -46,22 +63,9 @@ function bindFilterEvents(elements, runUpdate) {
     elements.campusFilter.value = 'Todos';
     elements.supportTypeFilter.value = 'Todos';
     elements.supportStatusFilter.value = 'Todos';
-    elements.qualityFilter.value = 'Todos';
-    runUpdate();
+    elements.missingCampusFilter.value = 'Todos';
+    runUpdate(elements);
   });
-}
-
-function runUpdate(elements) {
-  state.filteredRecords = applyFilters(state.allRecords, state.filters);
-  renderKpis(elements.kpiGrid, state.filteredRecords);
-  updateCounters(elements.recordsCounter, elements.missingCampusCounter, state.filteredRecords);
-  updateMainTable(table, state.filteredRecords);
-  updateCharts(charts, state.filteredRecords);
-
-  if (!state.selectedRecord || !state.filteredRecords.find((record) => record.id === state.selectedRecord.id)) {
-    state.selectedRecord = null;
-    renderDetail(elements.detailPanel, null);
-  }
 }
 
 async function init() {
@@ -71,7 +75,7 @@ async function init() {
     campusFilter: document.getElementById('campusFilter'),
     supportTypeFilter: document.getElementById('supportTypeFilter'),
     supportStatusFilter: document.getElementById('supportStatusFilter'),
-    qualityFilter: document.getElementById('qualityFilter'),
+    missingCampusFilter: document.getElementById('missingCampusFilter'),
     clearFiltersBtn: document.getElementById('clearFiltersBtn'),
     recordsCounter: document.getElementById('recordsCounter'),
     missingCampusCounter: document.getElementById('missingCampusCounter'),
@@ -82,15 +86,15 @@ async function init() {
 
   const data = await loadConsolidatedData();
   state.allRecords = data.records;
-  elements.generatedAt.textContent = data.generatedAt || 'Sin metadato';
+  elements.generatedAt.textContent = data.generatedAt;
 
   const options = hydrateFilterOptions(state.allRecords);
   fillSelect(elements.campusFilter, options.campuses);
   fillSelect(elements.supportTypeFilter, options.supportTypes);
   fillSelect(elements.supportStatusFilter, options.supportStatus);
-  fillSelect(elements.qualityFilter, options.quality);
+  fillSelect(elements.missingCampusFilter, options.missingCampus);
 
-  table = createMainTable('#crmTable', (record) => {
+  table = createMainTable('crmTable', (record) => {
     state.selectedRecord = record;
     renderDetail(elements.detailPanel, record);
   });
@@ -98,10 +102,10 @@ async function init() {
   charts = createCharts();
 
   elements.exportCsvBtn.addEventListener('click', () => {
-    table.download('csv', 'crm_academico_filtrado.csv');
+    table.exportCsv('crm_academico_filtrado.csv');
   });
 
-  bindFilterEvents(elements, () => runUpdate(elements));
+  bindFilterEvents(elements);
   runUpdate(elements);
 }
 
