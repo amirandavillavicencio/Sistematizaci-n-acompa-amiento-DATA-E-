@@ -3,7 +3,6 @@ const defaultState = {
   campus: 'Todos',
   supportType: 'Todos',
   supportStatus: 'Todos',
-  missingCampus: 'Todos',
   source: 'Todas',
 };
 
@@ -21,7 +20,6 @@ export function hydrateFilterOptions(records) {
     campuses,
     supportTypes: ['Todos', 'CIAC', 'Talleres', 'Mentorías', 'Atenciones', 'Sin apoyos'],
     supportStatus: ['Todos', 'Con apoyo', 'Sin apoyo'],
-    missingCampus: ['Todos', 'Solo sin campus', 'Solo con campus'],
     sources,
   };
 }
@@ -47,13 +45,8 @@ export function applyFilters(records, filters) {
       || (filters.supportStatus === 'Con apoyo' && row.tiene_apoyo)
       || (filters.supportStatus === 'Sin apoyo' && !row.tiene_apoyo);
 
-    const byMissingCampus =
-      filters.missingCampus === 'Todos'
-      || (filters.missingCampus === 'Solo sin campus' && row.sin_campus)
-      || (filters.missingCampus === 'Solo con campus' && !row.sin_campus);
-
     const bySource = filters.source === 'Todas' || row.fuentes_detectadas.includes(filters.source);
 
-    return bySearch && byCampus && byType && byStatus && byMissingCampus && bySource;
+    return bySearch && byCampus && byType && byStatus && bySource;
   });
 }

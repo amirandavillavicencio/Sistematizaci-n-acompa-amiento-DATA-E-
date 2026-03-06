@@ -59,6 +59,7 @@ export async function loadConsolidatedData() {
   return {
     generatedAt: payload.meta?.generated_at || new Date().toISOString(),
     summary: payload.summary || {},
+    qualitySummary: payload.quality_summary || {},
     records,
     missingCampus,
   };
